@@ -211,13 +211,31 @@ transport.JSONRPCRequest{
 
 ## Auth Package
 
-The `internal/auth/` package provides OAuth2 authentication:
+The `internal/auth/` package provides OAuth2 authentication and API key management:
 
 ### OAuth Handler (`oauth.go`)
 - OAuth2 flow with Google endpoints
 - CSRF protection via state parameter
 - Configurable scopes (Slides, Drive, Translate APIs)
 - Token callback hook for post-authentication processing
+- API key generation and return on successful authentication
+
+### API Key Generation (`apikey.go`)
+- Generates UUID v4 format API keys
+- Cryptographically secure random generation
+- Format: `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`
+
+### API Key Store (`store.go`)
+- Firestore-backed storage for API keys and refresh tokens
+- Document structure: `{api_key, refresh_token, user_email, created_at, last_used}`
+- Fast lookups using API key as document ID
+- Interface-based design for easy testing with `APIKeyStoreInterface`
+
+### API Key Callback (`callback.go`)
+- Creates callback function for OAuth flow
+- Generates API key on successful token exchange
+- Stores API key and refresh token in Firestore
+- Returns API key to user (shown only once)
 
 ### Secret Loader (`secrets.go`)
 - Load OAuth credentials from Google Secret Manager
@@ -236,11 +254,22 @@ auth.OAuthConfig{
 // Create handler
 handler := auth.NewOAuthHandler(config, logger)
 
-// Set callback for when tokens are obtained
-handler.SetOnTokenFunc(func(ctx context.Context, token *oauth2.Token) error {
-    // Store token, generate API key, etc.
-    return nil
+// Set callback for API key generation
+store, _ := auth.NewAPIKeyStore(ctx, projectID, "api_keys")
+callback := auth.NewAPIKeyCallback(auth.TokenCallbackConfig{
+    Store:  store,
+    Logger: logger,
 })
+handler.SetOnTokenFuncWithResult(callback)
+
+// API key record structure
+auth.APIKeyRecord{
+    APIKey:       "uuid-format-key",
+    RefreshToken: "oauth2-refresh-token",
+    UserEmail:    "user@example.com",
+    CreatedAt:    time.Now(),
+    LastUsed:     time.Now(),
+}
 ```
 
 ### Default Scopes

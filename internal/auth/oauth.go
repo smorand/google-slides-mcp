@@ -27,6 +27,11 @@ type OAuthConfig struct {
 	Scopes       []string
 }
 
+// TokenCallbackResult holds the result from the token callback.
+type TokenCallbackResult struct {
+	APIKey string // The generated API key (if any)
+}
+
 // OAuthHandler handles OAuth2 authentication flow.
 type OAuthHandler struct {
 	config      *oauth2.Config
@@ -34,6 +39,8 @@ type OAuthHandler struct {
 	states      map[string]bool // Track valid state tokens
 	mu          sync.RWMutex
 	onTokenFunc func(ctx context.Context, token *oauth2.Token) error
+	// onTokenFuncWithResult is the new callback that returns a result containing the API key.
+	onTokenFuncWithResult func(ctx context.Context, token *oauth2.Token) (*TokenCallbackResult, error)
 }
 
 // NewOAuthHandler creates a new OAuth handler.
@@ -65,6 +72,11 @@ func NewOAuthHandler(config OAuthConfig, logger *slog.Logger) *OAuthHandler {
 // SetOnTokenFunc sets the callback function called when a token is obtained.
 func (h *OAuthHandler) SetOnTokenFunc(fn func(ctx context.Context, token *oauth2.Token) error) {
 	h.onTokenFunc = fn
+}
+
+// SetOnTokenFuncWithResult sets the callback function that returns an API key when a token is obtained.
+func (h *OAuthHandler) SetOnTokenFuncWithResult(fn func(ctx context.Context, token *oauth2.Token) (*TokenCallbackResult, error)) {
+	h.onTokenFuncWithResult = fn
 }
 
 // HandleAuth handles GET /auth and initiates the OAuth2 flow.
@@ -155,8 +167,21 @@ func (h *OAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		slog.Time("expiry", token.Expiry),
 	)
 
-	// Call the token callback if set
-	if h.onTokenFunc != nil {
+	var apiKey string
+
+	// Call the token callback with result if set (preferred)
+	if h.onTokenFuncWithResult != nil {
+		result, err := h.onTokenFuncWithResult(r.Context(), token)
+		if err != nil {
+			h.logger.Error("token callback failed", slog.Any("error", err))
+			h.writeError(w, http.StatusInternalServerError, "failed to process token")
+			return
+		}
+		if result != nil {
+			apiKey = result.APIKey
+		}
+	} else if h.onTokenFunc != nil {
+		// Fallback to legacy callback
 		if err := h.onTokenFunc(r.Context(), token); err != nil {
 			h.logger.Error("token callback failed", slog.Any("error", err))
 			h.writeError(w, http.StatusInternalServerError, "failed to process token")
@@ -174,6 +199,12 @@ func (h *OAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	// Include refresh token status (but not the actual token for security)
 	if token.RefreshToken != "" {
 		response["has_refresh_token"] = true
+	}
+
+	// Include API key if generated (shown only once)
+	if apiKey != "" {
+		response["api_key"] = apiKey
+		response["api_key_warning"] = "Save this API key securely. It will not be shown again."
 	}
 
 	json.NewEncoder(w).Encode(response)

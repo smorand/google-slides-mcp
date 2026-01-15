@@ -195,8 +195,30 @@ The server uses OAuth2 with Google for user authentication:
    - Google Cloud Translation API (translate content)
 4. **Callback**: Google redirects to `/auth/callback` with authorization code
 5. **Token Exchange**: Server exchanges code for access and refresh tokens
-6. **API Key Generation**: Server generates API key (implemented in US-00006)
-7. **Subsequent Requests**: Include `Authorization: Bearer <api_key>` header
+6. **API Key Generation**: Server generates UUID-format API key
+7. **Storage**: API key and refresh token stored in Firestore
+8. **Response**: API key returned to user (shown only once)
+   ```json
+   {
+     "message": "Authentication successful",
+     "api_key": "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx",
+     "api_key_warning": "Save this API key securely. It will not be shown again.",
+     "has_refresh_token": true
+   }
+   ```
+9. **Subsequent Requests**: Include `Authorization: Bearer <api_key>` header
+
+### API Key Storage
+
+API keys are stored in Firestore with the following structure:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `api_key` | string | UUID v4 format key (document ID) |
+| `refresh_token` | string | OAuth2 refresh token for API access |
+| `user_email` | string | User's email (optional) |
+| `created_at` | timestamp | When the key was generated |
+| `last_used` | timestamp | Last time the key was used |
 
 ### Required OAuth2 Scopes
 

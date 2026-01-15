@@ -330,6 +330,28 @@ func TestSetOnTokenFunc(t *testing.T) {
 	}
 }
 
+func TestSetOnTokenFuncWithResult(t *testing.T) {
+	handler := NewOAuthHandler(OAuthConfig{}, nil)
+
+	handler.SetOnTokenFuncWithResult(func(ctx context.Context, token *oauth2.Token) (*TokenCallbackResult, error) {
+		return &TokenCallbackResult{APIKey: "test-api-key"}, nil
+	})
+
+	if handler.onTokenFuncWithResult == nil {
+		t.Error("expected onTokenFuncWithResult to be set")
+	}
+}
+
+func TestTokenCallbackResult_APIKey(t *testing.T) {
+	result := &TokenCallbackResult{
+		APIKey: "test-api-key-12345678",
+	}
+
+	if result.APIKey != "test-api-key-12345678" {
+		t.Errorf("expected API key 'test-api-key-12345678', got %s", result.APIKey)
+	}
+}
+
 func TestDefaultScopes_ContainsRequiredAPIs(t *testing.T) {
 	expectedScopes := []string{
 		"presentations", // Slides API
