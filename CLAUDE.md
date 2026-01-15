@@ -1972,6 +1972,109 @@ output, err := tools.CreateNumberedList(ctx, tokenSource, tools.CreateNumberedLi
 fmt.Printf("Applied: %s, Scope: %s\n", output.NumberPreset, output.ParagraphScope)
 ```
 
+### modify_list Tool (`modify_list.go`)
+Modifies existing list properties, removes list formatting, or changes indentation.
+
+**Input:**
+```go
+tools.ModifyListInput{
+    PresentationID:   "presentation-id",  // Required
+    ObjectID:         "object-id",        // Required - ID of shape containing list
+    Action:           "modify",           // Required: "modify", "remove", "increase_indent", "decrease_indent"
+    ParagraphIndices: []int{0, 2},        // Optional - apply to specific paragraphs (0-based), all if omitted
+    Properties:       &ListModifyProperties{...},  // Required for "modify" action
+}
+
+// Properties for modify action:
+tools.ListModifyProperties{
+    BulletStyle: "STAR",      // Optional - change bullet style (DISC, CIRCLE, SQUARE, DIAMOND, ARROW, STAR, CHECKBOX)
+    NumberStyle: "ROMAN_UPPER", // Optional - change number style (DECIMAL, ALPHA_UPPER, ALPHA_LOWER, ROMAN_UPPER, ROMAN_LOWER)
+    Color:       "#FF0000",   // Optional - change bullet/number color (hex string)
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `modify` | Change bullet style, number style, or color (requires properties) |
+| `remove` | Remove list formatting, convert to plain text |
+| `increase_indent` | Increase indentation by 18 points (nest deeper) |
+| `decrease_indent` | Decrease indentation by 18 points (minimum 0) |
+
+**Output:**
+```go
+tools.ModifyListOutput{
+    ObjectID:       "object-id",        // The modified object's ID
+    Action:         "modify",           // The action performed
+    ParagraphScope: "ALL",              // "ALL" or "INDICES [0, 2]"
+    Result:         "Modified: bullet_style=BULLET_STAR_CIRCLE_SQUARE",  // Description of changes
+}
+```
+
+**Features:**
+- Modify action can change bullet_style, number_style, or color (at least one required)
+- Remove action uses DeleteParagraphBulletsRequest to convert list to plain text
+- Indent actions use UpdateParagraphStyleRequest with indentStart property
+- Default indentation increment is 18 points per level
+- Action and style names are case-insensitive (normalized)
+- Supports same bullet/number styles as create_bullet_list and create_numbered_list tools
+
+**Sentinel Errors:**
+```go
+tools.ErrModifyListFailed       // Generic modification failure
+tools.ErrInvalidListAction      // Invalid action (must be modify, remove, increase_indent, decrease_indent)
+tools.ErrNoListProperties       // Properties required for modify action, or no properties specified
+tools.ErrInvalidBulletStyle     // Invalid bullet style
+tools.ErrInvalidNumberStyle     // Invalid number style
+tools.ErrInvalidParagraphIndex  // Paragraph index negative or out of range
+tools.ErrNotTextObject          // Object does not contain text (tables must be done cell by cell)
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Remove list formatting (convert to plain text)
+output, err := tools.ModifyList(ctx, tokenSource, tools.ModifyListInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "remove",
+})
+
+// Increase indentation (nest deeper)
+output, err := tools.ModifyList(ctx, tokenSource, tools.ModifyListInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "increase_indent",
+})
+
+// Change bullet style to star
+output, err := tools.ModifyList(ctx, tokenSource, tools.ModifyListInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "modify",
+    Properties: &tools.ListModifyProperties{
+        BulletStyle: "STAR",
+    },
+})
+
+// Change list color for specific paragraphs
+output, err := tools.ModifyList(ctx, tokenSource, tools.ModifyListInput{
+    PresentationID:   "abc123",
+    ObjectID:         "shape-xyz",
+    Action:           "modify",
+    ParagraphIndices: []int{0, 2},
+    Properties: &tools.ListModifyProperties{
+        Color: "#FF0000",
+    },
+})
+
+fmt.Printf("Action: %s, Result: %s\n", output.Action, output.Result)
+```
+
 ### search_text Tool (`search_text.go`)
 Searches for text across all slides in a presentation.
 

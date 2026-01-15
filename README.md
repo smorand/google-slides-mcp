@@ -2188,6 +2188,128 @@ Full preset names are also accepted (e.g., `NUMBERED_DECIMAL_NESTED`, `NUMBERED_
 
 ---
 
+#### `modify_list`
+
+Modify existing list properties, remove list formatting, or change indentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "action": "modify",
+  "paragraph_indices": [0, 2],
+  "properties": {
+    "bullet_style": "STAR",
+    "color": "#FF0000"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the shape containing text |
+| `action` | string | Yes | Action to perform: `modify`, `remove`, `increase_indent`, `decrease_indent` |
+| `paragraph_indices` | array | No | 0-based indices of paragraphs to apply action to (all if omitted) |
+| `properties` | object | For `modify` | Properties to modify (required for `modify` action) |
+
+**Actions:**
+
+| Action | Description |
+|--------|-------------|
+| `modify` | Change bullet style, number style, or color (requires `properties`) |
+| `remove` | Remove list formatting, convert to plain text |
+| `increase_indent` | Increase indentation by 18 points (nest deeper) |
+| `decrease_indent` | Decrease indentation by 18 points (minimum 0) |
+
+**Properties (for `modify` action):**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `bullet_style` | string | New bullet style: `DISC`, `CIRCLE`, `SQUARE`, `DIAMOND`, `ARROW`, `STAR`, `CHECKBOX` |
+| `number_style` | string | New number style: `DECIMAL`, `ALPHA_UPPER`, `ALPHA_LOWER`, `ROMAN_UPPER`, `ROMAN_LOWER` |
+| `color` | string | Hex color for bullets/numbers (e.g., `#FF0000`) |
+
+At least one property must be provided for `modify` action.
+
+**Output:**
+```json
+{
+  "object_id": "textbox_123",
+  "action": "modify",
+  "paragraph_scope": "ALL",
+  "result": "Modified: bullet_style=BULLET_STAR_CIRCLE_SQUARE, color=#FF0000"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | ID of the modified object |
+| `action` | string | The action that was performed |
+| `paragraph_scope` | string | `"ALL"` or `"INDICES [0, 2]"` indicating affected paragraphs |
+| `result` | string | Description of what was changed |
+
+**Example - Remove list formatting:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "action": "remove"
+}
+```
+
+**Example - Increase indentation:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "action": "increase_indent"
+}
+```
+
+**Example - Change bullet style to star:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "action": "modify",
+  "properties": {
+    "bullet_style": "STAR"
+  }
+}
+```
+
+**Example - Change list color for specific paragraphs:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "action": "modify",
+  "paragraph_indices": [0, 2],
+  "properties": {
+    "color": "#FF0000"
+  }
+}
+```
+
+**Errors:**
+- `invalid list action: action must be 'modify', 'remove', 'increase_indent', or 'decrease_indent'` - Invalid action
+- `no list properties provided: properties are required for 'modify' action` - Missing properties for modify
+- `no list properties provided: at least one property (bullet_style, number_style, or color) must be provided` - Empty properties
+- `invalid bullet_style: 'XYZ' is not a valid bullet style` - Invalid bullet style
+- `invalid number_style: 'XYZ' is not a valid number style` - Invalid number style
+- `invalid paragraph_index: paragraph indices cannot be negative` - Negative index
+- `invalid paragraph_index: paragraph index N is out of range (object has M paragraphs)` - Index too large
+- `object does not contain text` - Object type doesn't support text
+- `object does not contain editable text: tables must have list properties modified cell by cell` - Table object
+- `object not found: object 'xyz' not found in presentation` - Invalid object ID
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 #### `search_text`
 
 Search for text across all slides in a presentation.
@@ -2433,6 +2555,7 @@ Delete text (replace with empty):
 - `format_paragraph` - Set paragraph styles
 - `create_bullet_list` - Convert text to bullet lists
 - `create_numbered_list` - Convert text to numbered lists
+- `modify_list` - Modify list properties, remove formatting, or change indentation
 
 ### Media and Objects
 - `add_image` - Insert images

@@ -1034,3 +1034,38 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-15 - US-00031 - Implement tool to modify list properties
+
+**Status:** Success
+
+**What was implemented:**
+- New `modify_list` MCP tool to modify existing list properties, remove formatting, or change indentation
+- Four actions supported: 'modify', 'remove', 'increase_indent', 'decrease_indent'
+- 'modify' action: change bullet_style, number_style, or color using CreateParagraphBulletsRequest and UpdateTextStyleRequest
+- 'remove' action: uses DeleteParagraphBulletsRequest to convert list back to plain text
+- 'increase_indent'/'decrease_indent' actions: use UpdateParagraphStyleRequest with indentStart property
+- Default indentation increment of 18 points per level (standard for Google Slides)
+- Optional paragraph_indices array to apply action to specific paragraphs only
+- Action and style names are case-insensitive (normalized)
+- Reuses existing validBulletStyles and validNumberStyles maps from create_bullet_list and create_numbered_list
+- Comprehensive test suite with 27 test cases covering all actions and error scenarios
+
+**Files changed:**
+- `internal/tools/modify_list.go` - modify_list tool implementation with ModifyListInput, ModifyListOutput, ListModifyProperties types, and helper functions
+- `internal/tools/modify_list_test.go` - Comprehensive tests (27 test cases including helper function tests)
+- `CLAUDE.md` - Added modify_list documentation with actions table, input/output examples, usage patterns
+- `README.md` - Added full modify_list tool documentation with parameters, actions table, properties, examples, and errors
+
+**Learnings:**
+- DeleteParagraphBulletsRequest removes list formatting and converts paragraphs back to plain text
+- UpdateParagraphStyleRequest with indentStart property controls paragraph indentation (in points)
+- To change bullet/number style on existing list, use CreateParagraphBulletsRequest with new preset (replaces existing)
+- Indentation uses points as unit (1 point = 12700 EMU); 18 points is standard indent increment
+- getCurrentIndent helper reads existing ParagraphStyle.IndentStart to calculate new indentation
+- Reusing parseHexColor helper for color validation when modifying list color
+- Pattern: validate action first, then action-specific validation (properties required only for 'modify')
+
+**Remaining issues:** None
+
+---

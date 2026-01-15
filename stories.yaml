@@ -765,7 +765,7 @@
   - Remove action converts list back to plain text
   - Indent actions change nesting level
   - 'Command: go test ./internal/tools/... -run TestModifyList passes'
-  passes: false
+  passes: true
 - id: US-00032
   title: Implement tool to add image to slide
   priority: 8
