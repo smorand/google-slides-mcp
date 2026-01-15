@@ -1897,6 +1897,105 @@ Add hyperlink to text:
 
 ---
 
+#### `format_paragraph`
+
+Set paragraph formatting options like alignment, spacing, and indentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "paragraph_index": 0,
+  "formatting": {
+    "alignment": "CENTER",
+    "line_spacing": 150,
+    "space_above": 12,
+    "space_below": 12,
+    "indent_first_line": 36,
+    "indent_start": 18,
+    "indent_end": 18
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the shape containing text |
+| `paragraph_index` | integer | No | 0-based index of paragraph to format (all if omitted) |
+| `formatting` | object | Yes | Formatting options to apply |
+
+**Formatting Options:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `alignment` | string | Text alignment: `START`, `CENTER`, `END`, `JUSTIFIED` |
+| `line_spacing` | number | Line spacing as percentage (100 = single, 150 = 1.5 lines, 200 = double) |
+| `space_above` | number | Space above paragraph in points |
+| `space_below` | number | Space below paragraph in points |
+| `indent_first_line` | number | First line indent in points |
+| `indent_start` | number | Left indent in points (for LTR text) |
+| `indent_end` | number | Right indent in points (for LTR text) |
+
+**Output:**
+```json
+{
+  "object_id": "textbox_123",
+  "applied_formatting": [
+    "alignment=CENTER",
+    "line_spacing=150.0%",
+    "space_above=12.0pt"
+  ],
+  "paragraph_scope": "ALL"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | ID of the formatted object |
+| `applied_formatting` | array | List of formatting properties that were applied |
+| `paragraph_scope` | string | `"ALL"` or `"INDEX (N)"` indicating which paragraphs were formatted |
+
+**Example - Center align all paragraphs:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "formatting": {
+    "alignment": "CENTER"
+  }
+}
+```
+
+**Example - Format specific paragraph with multiple options:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "paragraph_index": 1,
+  "formatting": {
+    "alignment": "JUSTIFIED",
+    "line_spacing": 150,
+    "indent_first_line": 36
+  }
+}
+```
+
+**Errors:**
+- `no formatting properties provided` - Formatting object is empty or missing
+- `invalid alignment value: must be START, CENTER, END, or JUSTIFIED` - Invalid alignment
+- `invalid paragraph_index: paragraph_index cannot be negative` - Negative index
+- `invalid paragraph_index: paragraph index N is out of range (object has M paragraphs)` - Index too large
+- `object does not contain text` - Object type doesn't support text formatting
+- `object does not contain editable text: tables must be formatted cell by cell` - Table formatting
+- `object not found: object 'xyz' not found in presentation` - Invalid object ID
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 #### `search_text`
 
 Search for text across all slides in a presentation.

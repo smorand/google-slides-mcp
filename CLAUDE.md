@@ -1704,6 +1704,107 @@ output, err := tools.StyleText(ctx, tokenSource, tools.StyleTextInput{
 fmt.Printf("Applied styles: %v\n", output.AppliedStyles)
 ```
 
+### format_paragraph Tool (`format_paragraph.go`)
+Sets paragraph formatting options like alignment, spacing, and indentation.
+
+**Input:**
+```go
+tools.FormatParagraphInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "object-id",        // Required - ID of shape containing text
+    ParagraphIndex: &paragraphIdx,      // Optional - format specific paragraph (0-based), all if omitted
+    Formatting:     &ParagraphFormattingOptions{...},  // Required - formatting options
+}
+
+// Formatting options:
+tools.ParagraphFormattingOptions{
+    Alignment:       "CENTER",      // Optional: START, CENTER, END, JUSTIFIED
+    LineSpacing:     &150.0,        // Optional: percentage (100 = normal, 150 = 1.5 lines)
+    SpaceAbove:      &12.0,         // Optional: points
+    SpaceBelow:      &12.0,         // Optional: points
+    IndentFirstLine: &36.0,         // Optional: points
+    IndentStart:     &18.0,         // Optional: points (left indent)
+    IndentEnd:       &18.0,         // Optional: points (right indent)
+}
+```
+
+**Output:**
+```go
+tools.FormatParagraphOutput{
+    ObjectID:          "object-id",                    // The formatted object's ID
+    AppliedFormatting: []string{"alignment=CENTER"},   // List of formatting applied
+    ParagraphScope:    "ALL",                          // "ALL" or "INDEX (N)"
+}
+```
+
+**Alignment Values:**
+| Value | Description |
+|-------|-------------|
+| `START` | Left-aligned (for LTR languages) |
+| `CENTER` | Center-aligned |
+| `END` | Right-aligned (for LTR languages) |
+| `JUSTIFIED` | Justified text |
+
+**Features:**
+- Apply paragraph-level formatting (vs character-level in style_text)
+- Format all paragraphs or target specific paragraph by index
+- Alignment values are case-insensitive (normalized to uppercase)
+- Spacing and indentation use points as unit
+- Line spacing is percentage-based (100 = single, 200 = double)
+
+**Sentinel Errors:**
+```go
+tools.ErrFormatParagraphFailed  // Generic formatting failure
+tools.ErrNoFormattingProvided   // No formatting properties provided
+tools.ErrInvalidAlignment       // Invalid alignment value
+tools.ErrInvalidParagraphIndex  // Paragraph index negative or out of range
+tools.ErrNotTextObject          // Object does not contain text
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Center align all paragraphs
+output, err := tools.FormatParagraph(ctx, tokenSource, tools.FormatParagraphInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Formatting: &tools.ParagraphFormattingOptions{
+        Alignment: "CENTER",
+    },
+})
+
+// Apply multiple formatting options
+lineSpacing := 150.0
+spaceAbove := 12.0
+output, err := tools.FormatParagraph(ctx, tokenSource, tools.FormatParagraphInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Formatting: &tools.ParagraphFormattingOptions{
+        Alignment:   "JUSTIFIED",
+        LineSpacing: &lineSpacing,
+        SpaceAbove:  &spaceAbove,
+    },
+})
+
+// Format specific paragraph (0-based index)
+paragraphIdx := 1
+indentFirst := 36.0
+output, err := tools.FormatParagraph(ctx, tokenSource, tools.FormatParagraphInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    ParagraphIndex: &paragraphIdx,
+    Formatting: &tools.ParagraphFormattingOptions{
+        IndentFirstLine: &indentFirst,
+    },
+})
+
+fmt.Printf("Applied: %v, Scope: %s\n", output.AppliedFormatting, output.ParagraphScope)
+```
+
 ### search_text Tool (`search_text.go`)
 Searches for text across all slides in a presentation.
 
