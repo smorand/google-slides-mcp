@@ -53,17 +53,23 @@ type APIKeyMiddleware interface {
 	Middleware(next http.HandlerFunc) http.HandlerFunc
 }
 
+// RateLimitMiddleware is the interface for rate limiting middleware.
+type RateLimitMiddleware interface {
+	Middleware(next http.HandlerFunc) http.HandlerFunc
+}
+
 // Server represents the HTTP streamable MCP server.
 type Server struct {
-	config           ServerConfig
-	httpServer       *http.Server
-	mux              *http.ServeMux
-	handler          *MCPHandler
-	authHandler      AuthHandler
-	apiKeyMiddleware APIKeyMiddleware
-	logger           *slog.Logger
-	mu               sync.RWMutex
-	running          bool
+	config              ServerConfig
+	httpServer          *http.Server
+	mux                 *http.ServeMux
+	handler             *MCPHandler
+	authHandler         AuthHandler
+	apiKeyMiddleware    APIKeyMiddleware
+	rateLimitMiddleware RateLimitMiddleware
+	logger              *slog.Logger
+	mu                  sync.RWMutex
+	running             bool
 }
 
 // NewServer creates a new MCP HTTP server.
@@ -146,6 +152,11 @@ func (s *Server) SetAPIKeyMiddleware(middleware APIKeyMiddleware) {
 	s.apiKeyMiddleware = middleware
 }
 
+// SetRateLimitMiddleware sets the rate limiting middleware.
+func (s *Server) SetRateLimitMiddleware(middleware RateLimitMiddleware) {
+	s.rateLimitMiddleware = middleware
+}
+
 // handleAuth handles the /auth endpoint.
 func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
 	if s.authHandler == nil {
@@ -172,7 +183,7 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	s.authHandler.HandleCallback(w, r)
 }
 
-// withMiddleware wraps a handler with logging and CORS middleware.
+// withMiddleware wraps a handler with logging, CORS, and rate limiting middleware.
 func (s *Server) withMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -189,8 +200,16 @@ func (s *Server) withMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// Create response wrapper to capture status code
 		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
-		// Call the actual handler
-		next(rw, r)
+		// Apply rate limiting if configured
+		if s.rateLimitMiddleware != nil {
+			rateLimitedHandler := s.rateLimitMiddleware.Middleware(func(w http.ResponseWriter, r *http.Request) {
+				next(w, r)
+			})
+			rateLimitedHandler(rw, r)
+		} else {
+			// No rate limiting, call handler directly
+			next(rw, r)
+		}
 
 		// Log the request
 		s.logger.Info("request completed",

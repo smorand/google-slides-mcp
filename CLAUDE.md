@@ -431,6 +431,70 @@ func (t *Tools) ModifySlide(ctx context.Context, input ModifySlideInput) (*Modif
 }
 ```
 
+## Rate Limiting Package
+
+The `internal/ratelimit/` package provides global rate limiting with per-endpoint support:
+
+### Token Bucket Algorithm (`limiter.go`)
+- Token bucket rate limiter for fair request distribution
+- Configurable requests per second and burst size
+- Per-endpoint rate limits override global defaults
+- Automatic token refill based on elapsed time
+
+### Rate Limit Headers
+All responses include standard rate limit headers:
+- `X-RateLimit-Limit` - Maximum requests allowed (burst size)
+- `X-RateLimit-Remaining` - Remaining requests in current window
+- `X-RateLimit-Reset` - Unix timestamp when limit resets
+
+### 429 Response
+When rate limit is exceeded:
+- Returns `429 Too Many Requests` status
+- Includes `Retry-After` header (seconds until next request allowed)
+- JSON body: `{"error": "rate limit exceeded", "retry_after": N}`
+
+### Configuration
+```go
+ratelimit.Config{
+    RequestsPerSecond: 10.0,   // Tokens added per second
+    BurstSize:         20,     // Maximum tokens (burst capacity)
+    Logger:            slog.Default(),
+}
+```
+
+### Usage Pattern
+```go
+// Create rate limiter
+limiter := ratelimit.New(ratelimit.Config{
+    RequestsPerSecond: 10.0,
+    BurstSize:         20,
+})
+
+// Set per-endpoint limits
+limiter.SetEndpointLimit("/api/heavy", 2.0, 5)   // 2 req/s, burst 5
+limiter.SetEndpointLimit("/api/fast", 100.0, 50) // 100 req/s, burst 50
+
+// Integrate with server
+server.SetRateLimitMiddleware(limiter)
+```
+
+### Removing Endpoint Limits
+```go
+// Remove endpoint-specific limit (falls back to global)
+limiter.RemoveEndpointLimit("/api/heavy")
+
+// Get all configured endpoint limits
+limits := limiter.GetEndpointLimits()
+```
+
+### Metrics
+```go
+// Check remaining tokens
+remaining := limiter.GlobalRemaining()
+limit := limiter.GlobalLimit()
+rate := limiter.GlobalRate()
+```
+
 ## Testing Locally
 
 1. Set up OAuth2 credentials in Secret Manager

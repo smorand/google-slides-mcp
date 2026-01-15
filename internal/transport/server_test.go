@@ -230,3 +230,112 @@ func TestResponseWriter(t *testing.T) {
 		t.Errorf("statusCode = %d, want %d", rw.statusCode, http.StatusCreated)
 	}
 }
+
+// mockRateLimiter is a mock rate limiter for testing.
+type mockRateLimiter struct {
+	allowRequest bool
+	retryAfter   int
+}
+
+func (m *mockRateLimiter) Middleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-RateLimit-Limit", "10")
+		w.Header().Set("X-RateLimit-Remaining", "5")
+
+		if !m.allowRequest {
+			w.Header().Set("Retry-After", "1")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"error":"rate limit exceeded"}`))
+			return
+		}
+		next(w, r)
+	}
+}
+
+func TestSetRateLimitMiddleware(t *testing.T) {
+	s := NewServer(ServerConfig{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	limiter := &mockRateLimiter{allowRequest: true}
+	s.SetRateLimitMiddleware(limiter)
+
+	// Should not panic
+	if s.rateLimitMiddleware == nil {
+		t.Error("rate limit middleware should be set")
+	}
+}
+
+func TestRateLimitingAllowsRequests(t *testing.T) {
+	s := NewServer(ServerConfig{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	limiter := &mockRateLimiter{allowRequest: true}
+	s.SetRateLimitMiddleware(limiter)
+
+	// Initialize handler first for MCP endpoint
+	s.handler.mu.Lock()
+	s.handler.initialized = true
+	s.handler.mu.Unlock()
+
+	// Use MCP endpoint which goes through middleware chain
+	initReq := JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/list",
+		Params:  json.RawMessage(`{}`),
+	}
+	body, _ := json.Marshal(initReq)
+	req := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	// Check rate limit headers are present
+	if w.Header().Get("X-RateLimit-Limit") != "10" {
+		t.Errorf("X-RateLimit-Limit = %s, want 10", w.Header().Get("X-RateLimit-Limit"))
+	}
+}
+
+func TestRateLimitingBlocksRequests(t *testing.T) {
+	s := NewServer(ServerConfig{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	limiter := &mockRateLimiter{allowRequest: false, retryAfter: 1}
+	s.SetRateLimitMiddleware(limiter)
+
+	// Initialize handler first for MCP endpoint
+	s.handler.mu.Lock()
+	s.handler.initialized = true
+	s.handler.mu.Unlock()
+
+	// Use a non-health endpoint to test rate limiting through middleware
+	initReq := JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/list",
+		Params:  json.RawMessage(`{}`),
+	}
+	body, _ := json.Marshal(initReq)
+	req := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusTooManyRequests)
+	}
+
+	// Check Retry-After header
+	if w.Header().Get("Retry-After") == "" {
+		t.Error("Retry-After header should be set")
+	}
+}

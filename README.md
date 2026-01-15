@@ -253,6 +253,42 @@ Example error response for insufficient permissions:
 }
 ```
 
+## Rate Limiting
+
+The server implements global rate limiting to protect against abuse:
+
+### Token Bucket Algorithm
+- Configurable requests per second limit (default: 10 req/s)
+- Burst capacity for handling traffic spikes (default: 20 requests)
+- Per-endpoint rate limits for fine-grained control
+
+### Response Headers
+All responses include rate limit information:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests allowed (burst size) |
+| `X-RateLimit-Remaining` | Remaining requests in current window |
+| `X-RateLimit-Reset` | Unix timestamp when limit resets |
+
+### Rate Limit Exceeded
+When the rate limit is exceeded, the server returns:
+- HTTP Status: `429 Too Many Requests`
+- `Retry-After` header with seconds to wait
+- JSON body:
+  ```json
+  {
+    "error": "rate limit exceeded",
+    "retry_after": 1
+  }
+  ```
+
+### Configuration
+Rate limits can be configured per-endpoint for different use cases:
+- Heavy operations (e.g., export): Lower limits
+- Read operations: Higher limits
+- Authentication endpoints: Separate limits
+
 ## Available MCP Tools
 
 The server provides comprehensive tools for Google Slides manipulation:
