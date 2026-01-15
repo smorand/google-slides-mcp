@@ -1136,6 +1136,64 @@ for _, pos := range output.NewOrder {
 }
 ```
 
+### duplicate_slide Tool (`duplicate_slide.go`)
+Duplicates an existing slide in a presentation.
+
+**Input:**
+```go
+tools.DuplicateSlideInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     2,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    InsertAt:       3,                  // 1-based position (0 or omitted = after source slide)
+}
+```
+
+**Output:**
+```go
+tools.DuplicateSlideOutput{
+    SlideIndex: 3,              // 1-based index of the new duplicated slide
+    SlideID:    "new-slide-id", // Object ID of the new duplicated slide
+}
+```
+
+**Features:**
+- Accepts either 1-based slide index OR slide ID for identification
+- If both provided, SlideID takes precedence
+- Default InsertAt (0 or omitted) places duplicate immediately after source slide
+- InsertAt beyond slide count is clamped to end
+- Uses `DuplicateObjectRequest` in BatchUpdate for duplication
+- If move fails, returns slide in default position with warning logged
+
+**Sentinel Errors:**
+```go
+tools.ErrDuplicateSlideFailed   // Generic duplication failure
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Duplicate slide by index (default position = after source)
+output, err := tools.DuplicateSlide(ctx, tokenSource, tools.DuplicateSlideInput{
+    PresentationID: "abc123",
+    SlideIndex:     2,
+})
+
+// Duplicate slide by ID to specific position
+output, err := tools.DuplicateSlide(ctx, tokenSource, tools.DuplicateSlideInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+    InsertAt:       1,  // Move to first position
+})
+
+fmt.Printf("New slide: index=%d, id=%s\n", output.SlideIndex, output.SlideID)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

@@ -1079,10 +1079,102 @@ Move specific slides by ID:
 
 ---
 
-*More tools to be documented:*
+#### `duplicate_slide`
 
-### Additional Slide Operations
-- `duplicate_slide` - Clone slides
+Duplicate an existing slide in a presentation, optionally placing the copy at a specific position.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 2
+}
+```
+
+Or by slide ID:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_id": "g123456789",
+  "insert_at": 1
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No* | 1-based index of slide to duplicate |
+| `slide_id` | string | No* | Object ID of slide to duplicate |
+| `insert_at` | integer | No | 1-based position for the copy (0 or omitted = after source slide) |
+
+*Either `slide_index` or `slide_id` is required. If both are provided, `slide_id` takes precedence.
+
+**Output:**
+```json
+{
+  "slide_index": 3,
+  "slide_id": "g987654321"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `slide_index` | integer | 1-based index of the new duplicated slide |
+| `slide_id` | string | Object ID of the new duplicated slide |
+
+**Features:**
+- Creates an exact copy of the source slide including all objects
+- Default position (insert_at omitted or 0) places copy immediately after the source slide
+- Insert position beyond slide count is clamped to end
+- If move operation fails, returns slide in default position with warning
+- Uses Google Slides API `DuplicateObjectRequest` for atomic duplication
+
+**Use Cases:**
+- Creating variations of existing slides
+- Building repetitive slide sections (agendas, separators)
+- Preserving slide as backup before modifications
+- Template-based slide generation
+
+**Examples:**
+
+Duplicate slide 2 (copy placed after slide 2 at position 3):
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 2
+}
+```
+
+Duplicate slide by ID and move to beginning:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_id": "g987654321",
+  "insert_at": 1
+}
+```
+
+Duplicate last slide to the end:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 5,
+  "insert_at": 6
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid slide reference: either slide_index or slide_id is required` - No slide specified
+- `slide not found: slide with ID 'X' not found` - Slide ID doesn't exist
+- `slide not found: slide index X out of range (1-N)` - Index out of bounds
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to duplicate slide` - Duplication operation failed
+
+---
+
+*More tools to be documented:*
 
 ### Content Manipulation
 - `add_text_box` - Add text elements
