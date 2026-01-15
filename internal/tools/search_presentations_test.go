@@ -13,10 +13,12 @@ import (
 
 // mockDriveService implements DriveService for testing.
 type mockDriveService struct {
-	ListFilesFunc  func(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
-	CopyFileFunc   func(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
-	ExportFileFunc func(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
-	MoveFileFunc   func(ctx context.Context, fileID string, folderID string) error
+	ListFilesFunc      func(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
+	CopyFileFunc       func(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
+	ExportFileFunc     func(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
+	MoveFileFunc       func(ctx context.Context, fileID string, folderID string) error
+	UploadFileFunc     func(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error)
+	MakeFilePublicFunc func(ctx context.Context, fileID string) error
 }
 
 func (m *mockDriveService) ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error) {
@@ -45,6 +47,20 @@ func (m *mockDriveService) MoveFile(ctx context.Context, fileID string, folderID
 		return m.MoveFileFunc(ctx, fileID, folderID)
 	}
 	return errors.New("not implemented")
+}
+
+func (m *mockDriveService) UploadFile(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error) {
+	if m.UploadFileFunc != nil {
+		return m.UploadFileFunc(ctx, name, mimeType, content)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockDriveService) MakeFilePublic(ctx context.Context, fileID string) error {
+	if m.MakeFilePublicFunc != nil {
+		return m.MakeFilePublicFunc(ctx, fileID)
+	}
+	return nil // Default to success for tests that don't care about this
 }
 
 func TestSearchPresentations_Success(t *testing.T) {

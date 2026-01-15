@@ -1069,3 +1069,44 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-15 - US-00032 - Implement tool to add image to slide
+
+**Status:** Success
+
+**What was implemented:**
+- New `add_image` MCP tool to add images to slides from base64-encoded data
+- Extended DriveService interface with `UploadFile` and `MakeFilePublic` methods
+- Image upload workflow: decode base64 → detect MIME type → upload to Drive → make public → create image in Slides
+- Automatic MIME type detection from magic bytes (PNG, JPEG, GIF, WebP, BMP)
+- Input accepts presentation_id, slide_index OR slide_id, image_base64, optional position, optional size
+- Position defaults to (0, 0) if not specified; coordinates in points
+- Size supports width only, height only, or both (aspect ratio preserved when one dimension omitted)
+- Uses CreateImageRequest in Slides API BatchUpdate with Drive file URL
+- Makes uploaded image publicly accessible so Google Slides can display it
+- Graceful handling when MakeFilePublic fails (logs warning, continues - image may still work)
+- Comprehensive test suite with 23+ test cases covering all scenarios
+
+**Files changed:**
+- `internal/tools/tools.go` - Added UploadFile and MakeFilePublic methods to DriveService interface and realDriveService implementation
+- `internal/tools/add_image.go` - add_image tool implementation with AddImageInput, ImageSizeInput, AddImageOutput types, detectImageMimeType, generateImageFileName, generateImageObjectID, buildImageRequests helpers
+- `internal/tools/add_image_test.go` - Comprehensive tests (23+ test cases including helper function tests)
+- `internal/tools/search_presentations_test.go` - Updated mockDriveService with UploadFileFunc and MakeFilePublicFunc
+- `internal/tools/modify_list_test.go` - Fixed incorrect test expectation for invalid color (pre-existing bug in US-00031)
+- `CLAUDE.md` - Added add_image documentation with input/output examples, supported formats, features, sentinel errors
+- `README.md` - Added full add_image tool documentation with parameters, supported image formats, examples, and errors
+
+**Learnings:**
+- Google Slides API CreateImageRequest requires a publicly accessible URL for the image
+- Images must be uploaded to Drive first, then made publicly accessible via permissions
+- Drive API Files.Create with Media() uploads binary content
+- Drive API Permissions.Create with "anyone"/"reader" makes file publicly accessible
+- Image MIME type detection via magic bytes is more reliable than relying on file extensions
+- Slides API uses EMU (English Metric Units) internally: 1 point = 12700 EMU
+- CreateImageRequest can specify ElementProperties with PageObjectId, Transform (position), and Size
+- imageTimeNowFunc pattern allows overriding time.Now for deterministic test object IDs
+- MakeFilePublic failure should be non-fatal since image may still be accessible to authenticated user
+
+**Remaining issues:** None
+
+---

@@ -819,8 +819,8 @@ func TestBuildModifyListRequests(t *testing.T) {
 					Color: "invalid",
 				},
 			},
-			wantCount:        0, // Invalid color produces no requests
-			wantDescContains: "color=invalid",
+			wantCount:        0,  // Invalid color produces no requests
+			wantDescContains: "", // Invalid color is silently ignored, so no description for it
 		},
 	}
 

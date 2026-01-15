@@ -2558,7 +2558,131 @@ Delete text (replace with empty):
 - `modify_list` - Modify list properties, remove formatting, or change indentation
 
 ### Media and Objects
-- `add_image` - Insert images
+
+#### `add_image`
+
+Add an image to a slide from base64-encoded data.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 1,
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
+  "position": {"x": 100, "y": 50},
+  "size": {"width": 300, "height": 200}
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No* | 1-based index of the target slide |
+| `slide_id` | string | No* | Object ID of the target slide |
+| `image_base64` | string | Yes | Base64-encoded image data |
+| `position` | object | No | Position in points (default: 0, 0) |
+| `position.x` | number | No | X coordinate in points from left edge |
+| `position.y` | number | No | Y coordinate in points from top edge |
+| `size` | object | No | Size in points (optional, preserves aspect ratio) |
+| `size.width` | number | No | Width in points (optional) |
+| `size.height` | number | No | Height in points (optional) |
+
+*Either `slide_index` or `slide_id` must be provided.
+
+**Output:**
+```json
+{
+  "object_id": "image_1234567890123456"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | Unique identifier of the created image |
+
+**Supported Image Formats:**
+- PNG (image/png)
+- JPEG (image/jpeg)
+- GIF (image/gif)
+- WebP (image/webp)
+- BMP (image/bmp)
+
+**Features:**
+- Uses either 1-based slide index or slide ID for flexibility
+- Automatically detects image MIME type from magic bytes
+- Uploads image to Google Drive first for persistence
+- Makes uploaded file publicly accessible so Slides can display it
+- Position defaults to (0, 0) if not specified
+- Size is optional - if omitted, uses original image dimensions
+- If only width or height specified, aspect ratio is preserved
+- Standard slide dimensions: 720x405 points
+- 1 point = 12700 EMU (English Metric Units)
+
+**Use Cases:**
+- Adding logos to presentations
+- Inserting charts or diagrams
+- Adding screenshots or photos
+- Creating image galleries on slides
+- Programmatic presentation generation with images
+
+**Examples:**
+
+Add an image with default size:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA..."
+}
+```
+
+Add an image at specific position:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_id": "g123456",
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
+  "position": {"x": 100, "y": 150}
+}
+```
+
+Add an image with specific size:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 2,
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
+  "position": {"x": 50, "y": 100},
+  "size": {"width": 400, "height": 300}
+}
+```
+
+Add an image with width only (preserves aspect ratio):
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
+  "size": {"width": 200}
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid slide reference: either slide_index or slide_id is required` - Neither slide reference provided
+- `invalid image data: image_base64 is required` - Missing image data
+- `invalid image data: base64 decoding failed` - Invalid base64 encoding
+- `invalid image data: unable to detect image format` - Unrecognized image format
+- `invalid image size: size must have positive width and/or height` - Size dimensions ≤ 0
+- `invalid image position: position coordinates must be non-negative` - Negative position values
+- `failed to upload image to Drive` - Drive API upload error
+- `slide not found` - Slide index out of range or slide ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to add image` - API error during image creation
+
+---
+
 - `modify_image` - Edit image properties
 - `create_shape` - Add shapes
 - `create_line` - Draw lines and arrows

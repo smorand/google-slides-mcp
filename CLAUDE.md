@@ -2250,6 +2250,109 @@ for _, obj := range output.AffectedObjects {
 }
 ```
 
+### add_image Tool (`add_image.go`)
+Adds an image to a slide from base64 encoded data.
+
+**Input:**
+```go
+tools.AddImageInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    ImageBase64:    "base64-data...",   // Required - base64 encoded image data
+    Position:       &PositionInput{X: 100, Y: 50},  // Optional - position in points
+    Size:           &ImageSizeInput{Width: &200.0, Height: &150.0},  // Optional - size in points
+}
+
+// Position in points (standard slide is 720x405 points)
+tools.PositionInput{
+    X: 100,  // Points from left edge
+    Y: 50,   // Points from top edge
+}
+
+// Size in points (optional - if only one dimension is provided, aspect ratio is preserved)
+tools.ImageSizeInput{
+    Width:  *float64,  // Width in points (optional)
+    Height: *float64,  // Height in points (optional)
+}
+```
+
+**Output:**
+```go
+tools.AddImageOutput{
+    ObjectID: "image_1234567890",  // Unique ID of the created image
+}
+```
+
+**Features:**
+- Accepts either 1-based slide index OR slide ID for slide identification
+- Image data is base64 encoded and uploaded to Google Drive first
+- Automatically detects image MIME type (PNG, JPEG, GIF, WebP, BMP)
+- Position defaults to API-determined placement if not specified
+- Size is optional - if only width or height is provided, aspect ratio is preserved
+- Uses Drive API to upload image, then references it in Slides API
+- Makes uploaded image publicly accessible for Slides to read
+
+**Sentinel Errors:**
+```go
+tools.ErrAddImageFailed         // Generic image creation failure
+tools.ErrInvalidImageData       // Invalid base64 or unknown image format
+tools.ErrImageUploadFailed      // Failed to upload image to Drive
+tools.ErrInvalidImageSize       // Size must have positive width and/or height
+tools.ErrInvalidImagePosition   // Position coordinates must be non-negative
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+tools.ErrDriveAPIError          // Drive API errors
+```
+
+**Usage Pattern:**
+```go
+// Add image by slide index with position and size
+imageBase64 := base64.StdEncoding.EncodeToString(imageData)
+output, err := tools.AddImage(ctx, tokenSource, tools.AddImageInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    ImageBase64:    imageBase64,
+    Position:       &tools.PositionInput{X: 100, Y: 50},
+    Size: &tools.ImageSizeInput{
+        Width:  ptrFloat64(300),
+        Height: ptrFloat64(200),
+    },
+})
+
+// Add image with only width (preserves aspect ratio)
+output, err := tools.AddImage(ctx, tokenSource, tools.AddImageInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+    ImageBase64:    imageBase64,
+    Size: &tools.ImageSizeInput{
+        Width: ptrFloat64(400),
+    },
+})
+
+// Add image with default placement
+output, err := tools.AddImage(ctx, tokenSource, tools.AddImageInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    ImageBase64:    imageBase64,
+})
+
+fmt.Printf("Created image: %s\n", output.ObjectID)
+```
+
+**Supported Image Formats:**
+| Format | Magic Bytes |
+|--------|-------------|
+| PNG | `89 50 4E 47` |
+| JPEG | `FF D8 FF` |
+| GIF | `47 49 46` (GIF) |
+| WebP | `52 49 46 46...57 45 42 50` (RIFF...WEBP) |
+| BMP | `42 4D` (BM) |
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
@@ -2260,6 +2363,8 @@ type DriveService interface {
     CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
     ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
     MoveFile(ctx context.Context, fileID string, folderID string) error
+    UploadFile(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error)
+    MakeFilePublic(ctx context.Context, fileID string) error
 }
 
 // Factory pattern

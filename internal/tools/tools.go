@@ -72,6 +72,8 @@ type DriveService interface {
 	CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
 	ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
 	MoveFile(ctx context.Context, fileID string, folderID string) error
+	UploadFile(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error)
+	MakeFilePublic(ctx context.Context, fileID string) error
 }
 
 // DriveServiceFactory creates a Drive service from a token source.
@@ -145,6 +147,25 @@ func (s *realDriveService) MoveFile(ctx context.Context, fileID string, folderID
 		SupportsAllDrives(true).
 		Context(ctx).
 		Do()
+	return err
+}
+
+// UploadFile uploads a file to Drive.
+func (s *realDriveService) UploadFile(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error) {
+	file := &drive.File{
+		Name:     name,
+		MimeType: mimeType,
+	}
+	return s.service.Files.Create(file).Media(content).Context(ctx).Do()
+}
+
+// MakeFilePublic makes a file publicly accessible via link.
+func (s *realDriveService) MakeFilePublic(ctx context.Context, fileID string) error {
+	permission := &drive.Permission{
+		Type: "anyone",
+		Role: "reader",
+	}
+	_, err := s.service.Permissions.Create(fileID, permission).Context(ctx).Do()
 	return err
 }
 

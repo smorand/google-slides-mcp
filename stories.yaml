@@ -795,7 +795,7 @@
   - Aspect ratio is preserved when only width or height specified
   - Returns object_id
   - 'Command: go test ./internal/tools/... -run TestAddImage passes'
-  passes: false
+  passes: true
 - id: US-00033
   title: Implement tool to modify image properties
   priority: 8
