@@ -1110,3 +1110,42 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-15 - US-00033 - Implement tool to modify image properties
+
+**Status:** Success
+
+**What was implemented:**
+- New `modify_image` MCP tool to modify properties of existing images in presentations
+- Input accepts presentation_id, object_id, and properties object with any of: position, size, crop, brightness, contrast, transparency, recolor
+- Position and size modifications via UpdatePageElementTransformRequest with ABSOLUTE mode
+- Image property modifications (crop, brightness, contrast, transparency, recolor) via UpdateImagePropertiesRequest
+- Crop values as percentages (0-1) for top, bottom, left, right offsets
+- Brightness and contrast adjustments in range -1 to 1
+- Transparency level in range 0 to 1 (0 = opaque, 1 = fully transparent)
+- Recolor support with preset names (GRAYSCALE, SEPIA, NEGATIVE, LIGHT1-10, DARK1-10) or "none" to remove
+- Comprehensive validation for all property ranges before API calls
+- Returns list of modified properties for confirmation
+- Sentinel errors for all failure modes (not found, not an image, invalid values, etc.)
+- Comprehensive test suite with 24+ test cases covering all scenarios and edge cases
+
+**Files changed:**
+- `internal/tools/modify_image.go` - modify_image tool implementation with ModifyImageInput, ImageModifyProperties, CropInput, ModifyImageOutput types, validation helpers, request builders
+- `internal/tools/modify_image_test.go` - Comprehensive tests (24+ test cases including helper function tests)
+- `CLAUDE.md` - Added modify_image documentation with input/output examples, recolor presets, features, sentinel errors
+- `README.md` - Added full modify_image tool documentation with parameters, recolor presets, examples, and errors
+- `stories.yaml` - Marked US-00033 as passes: true
+
+**Learnings:**
+- UpdatePageElementTransformRequest with ABSOLUTE mode sets exact position/scale values
+- Position uses TranslateX/TranslateY in EMU; size uses ScaleX/ScaleY relative to original element size
+- UpdateImagePropertiesRequest requires field mask specifying which properties to update
+- Crop properties are offsets as percentages (0-1) stored in CropProperties struct
+- To remove recolor, set Recolor field to nil and include "recolor" in field mask
+- Must retrieve current element transform values to preserve non-modified properties when using ABSOLUTE mode
+- determineObjectType helper identifies object type for error messages when target is not an image
+- findElementByID recursively searches through all slides and groups to locate objects
+
+**Remaining issues:** None
+
+---

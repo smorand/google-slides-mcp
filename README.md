@@ -2683,7 +2683,168 @@ Add an image with width only (preserves aspect ratio):
 
 ---
 
-- `modify_image` - Edit image properties
+#### `modify_image`
+
+Modify properties of an existing image in a presentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "image_1234567890",
+  "properties": {
+    "position": {"x": 100, "y": 50},
+    "size": {"width": 300, "height": 200},
+    "crop": {"top": 0.1, "bottom": 0.1, "left": 0.05, "right": 0.05},
+    "brightness": 0.3,
+    "contrast": -0.2,
+    "transparency": 0.5,
+    "recolor": "GRAYSCALE"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | Object ID of the image to modify |
+| `properties` | object | Yes | Properties to modify (at least one required) |
+| `properties.position` | object | No | New position in points |
+| `properties.position.x` | number | No | X coordinate in points from left edge |
+| `properties.position.y` | number | No | Y coordinate in points from top edge |
+| `properties.size` | object | No | New size in points |
+| `properties.size.width` | number | No | Width in points |
+| `properties.size.height` | number | No | Height in points |
+| `properties.crop` | object | No | Crop percentages (0-1) |
+| `properties.crop.top` | number | No | Percentage to crop from top (0-1) |
+| `properties.crop.bottom` | number | No | Percentage to crop from bottom (0-1) |
+| `properties.crop.left` | number | No | Percentage to crop from left (0-1) |
+| `properties.crop.right` | number | No | Percentage to crop from right (0-1) |
+| `properties.brightness` | number | No | Brightness adjustment (-1 to 1) |
+| `properties.contrast` | number | No | Contrast adjustment (-1 to 1) |
+| `properties.transparency` | number | No | Transparency level (0 to 1, where 0 is opaque) |
+| `properties.recolor` | string | No | Recolor preset name or "none" to remove |
+
+**Output:**
+```json
+{
+  "object_id": "image_1234567890",
+  "modified_properties": ["position", "brightness", "contrast"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The modified image's object ID |
+| `modified_properties` | array | List of properties that were modified |
+
+**Recolor Presets:**
+| Preset | Description |
+|--------|-------------|
+| `GRAYSCALE` | Grayscale recolor |
+| `SEPIA` | Sepia tone |
+| `NEGATIVE` | Negative colors |
+| `LIGHT1` - `LIGHT10` | Light theme variations |
+| `DARK1` - `DARK10` | Dark theme variations |
+| `NONE` | Remove recolor effect |
+
+**Features:**
+- Modify multiple properties in a single call
+- Position and size use UpdatePageElementTransformRequest with ABSOLUTE mode
+- Image properties use UpdateImagePropertiesRequest with field masks
+- All properties are optional but at least one must be specified
+- Validates all property ranges before making API calls
+- Recolor "none" or "NONE" removes any existing recolor effect
+- Position and size changes preserve other transform properties
+- Standard slide dimensions: 720x405 points
+- 1 point = 12700 EMU (English Metric Units)
+
+**Use Cases:**
+- Repositioning images after initial placement
+- Resizing images to fit layout
+- Cropping images to focus on specific areas
+- Adjusting image brightness and contrast
+- Making images semi-transparent for watermarks or overlays
+- Applying visual effects with recolor presets
+- Removing previously applied recolor effects
+
+**Examples:**
+
+Move and resize an image:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image_xyz",
+  "properties": {
+    "position": {"x": 150, "y": 100},
+    "size": {"width": 400, "height": 300}
+  }
+}
+```
+
+Crop and adjust brightness/contrast:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image_xyz",
+  "properties": {
+    "crop": {"top": 0.1, "left": 0.1, "right": 0.1, "bottom": 0.1},
+    "brightness": 0.3,
+    "contrast": -0.2
+  }
+}
+```
+
+Apply grayscale recolor:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image_xyz",
+  "properties": {
+    "recolor": "GRAYSCALE"
+  }
+}
+```
+
+Remove recolor effect:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image_xyz",
+  "properties": {
+    "recolor": "none"
+  }
+}
+```
+
+Set transparency for watermark effect:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image_xyz",
+  "properties": {
+    "transparency": 0.7
+  }
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `object not found: object 'xyz' not found in presentation` - Object doesn't exist
+- `object is not an image: object 'xyz' is not an image (type: TEXT_BOX)` - Object is not an image
+- `no image properties to modify` - Properties object is empty or nil
+- `crop values must be between 0 and 1: top crop value X is invalid` - Invalid crop value
+- `brightness must be between -1 and 1` - Invalid brightness value
+- `contrast must be between -1 and 1` - Invalid contrast value
+- `transparency must be between 0 and 1` - Invalid transparency value
+- `invalid image size: size must have positive width and/or height` - Size dimensions ≤ 0
+- `invalid image position: position coordinates must be non-negative` - Negative position values
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to modify image` - API error during modification
+
+---
+
 - `create_shape` - Add shapes
 - `create_line` - Draw lines and arrows
 - `add_video` - Embed videos

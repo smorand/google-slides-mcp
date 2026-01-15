@@ -811,7 +811,7 @@
   - Brightness/contrast adjustments work
   - Transparency is applied
   - 'Command: go test ./internal/tools/... -run TestModifyImage passes'
-  passes: false
+  passes: true
 - id: US-00034
   title: Implement tool to replace image
   priority: 8

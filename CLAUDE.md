@@ -2353,6 +2353,140 @@ fmt.Printf("Created image: %s\n", output.ObjectID)
 | WebP | `52 49 46 46...57 45 42 50` (RIFF...WEBP) |
 | BMP | `42 4D` (BM) |
 
+### modify_image Tool (`modify_image.go`)
+Modifies properties of an existing image in a presentation.
+
+**Input:**
+```go
+tools.ModifyImageInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "image-object-id",  // Required - ID of the image to modify
+    Properties:     &ImageModifyProperties{...},  // Required - properties to modify
+}
+
+// Properties to modify (at least one required):
+tools.ImageModifyProperties{
+    Position:     &PositionInput{X: 100, Y: 50},  // Optional - new position in points
+    Size:         &SizeInput{Width: 300, Height: 200},  // Optional - new size in points
+    Crop:         &CropInput{Top: &0.1, Bottom: &0.1, Left: &0.05, Right: &0.05},  // Optional - crop percentages (0-1)
+    Brightness:   &0.5,   // Optional - brightness adjustment (-1 to 1)
+    Contrast:     &0.3,   // Optional - contrast adjustment (-1 to 1)
+    Transparency: &0.2,   // Optional - transparency level (0 to 1)
+    Recolor:      &"GRAYSCALE",  // Optional - recolor preset or "none" to remove
+}
+
+// Crop values as percentages (0-1)
+tools.CropInput{
+    Top:    *float64,  // 0-1 percentage from top
+    Bottom: *float64,  // 0-1 percentage from bottom
+    Left:   *float64,  // 0-1 percentage from left
+    Right:  *float64,  // 0-1 percentage from right
+}
+```
+
+**Output:**
+```go
+tools.ModifyImageOutput{
+    ObjectID:          "image-object-id",
+    ModifiedProperties: []string{"position", "brightness", "contrast"},  // List of modified properties
+}
+```
+
+**Recolor Presets:**
+| Preset | Description |
+|--------|-------------|
+| `GRAYSCALE` | Grayscale recolor |
+| `SEPIA` | Sepia tone |
+| `NEGATIVE` | Negative colors |
+| `LIGHT1` - `LIGHT10` | Light theme variations |
+| `DARK1` - `DARK10` | Dark theme variations |
+| `NONE` | Remove recolor effect |
+
+**Features:**
+- Modify position and/or size via UpdatePageElementTransformRequest with ABSOLUTE mode
+- Modify image properties (crop, brightness, contrast, transparency, recolor) via UpdateImagePropertiesRequest
+- All properties are optional, but at least one must be specified
+- Validates all property ranges before making API calls
+- Position and size changes preserve other transform properties (scale, translate)
+- Recolor "none" removes any existing recolor effect
+
+**Sentinel Errors:**
+```go
+tools.ErrModifyImageFailed      // Generic modification failure
+tools.ErrNotImageObject         // Object is not an image
+tools.ErrNoImageProperties      // No properties provided to modify
+tools.ErrInvalidCropValue       // Crop values must be between 0 and 1
+tools.ErrInvalidBrightnessValue // Brightness must be between -1 and 1
+tools.ErrInvalidContrastValue   // Contrast must be between -1 and 1
+tools.ErrInvalidTransparency    // Transparency must be between 0 and 1
+tools.ErrInvalidImageSize       // Size must have positive width and/or height
+tools.ErrInvalidImagePosition   // Position coordinates must be non-negative
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Modify image position and size
+output, err := tools.ModifyImage(ctx, tokenSource, tools.ModifyImageInput{
+    PresentationID: "abc123",
+    ObjectID:       "image-xyz",
+    Properties: &tools.ImageModifyProperties{
+        Position: &tools.PositionInput{X: 150, Y: 100},
+        Size:     &tools.SizeInput{Width: 400, Height: 300},
+    },
+})
+
+// Apply crop and adjust brightness/contrast
+top := 0.1
+brightness := 0.3
+contrast := -0.2
+output, err := tools.ModifyImage(ctx, tokenSource, tools.ModifyImageInput{
+    PresentationID: "abc123",
+    ObjectID:       "image-xyz",
+    Properties: &tools.ImageModifyProperties{
+        Crop:       &tools.CropInput{Top: &top},
+        Brightness: &brightness,
+        Contrast:   &contrast,
+    },
+})
+
+// Apply grayscale recolor
+recolor := "GRAYSCALE"
+output, err := tools.ModifyImage(ctx, tokenSource, tools.ModifyImageInput{
+    PresentationID: "abc123",
+    ObjectID:       "image-xyz",
+    Properties: &tools.ImageModifyProperties{
+        Recolor: &recolor,
+    },
+})
+
+// Remove recolor effect
+recolor := "none"
+output, err := tools.ModifyImage(ctx, tokenSource, tools.ModifyImageInput{
+    PresentationID: "abc123",
+    ObjectID:       "image-xyz",
+    Properties: &tools.ImageModifyProperties{
+        Recolor: &recolor,
+    },
+})
+
+// Set transparency
+transparency := 0.5
+output, err := tools.ModifyImage(ctx, tokenSource, tools.ModifyImageInput{
+    PresentationID: "abc123",
+    ObjectID:       "image-xyz",
+    Properties: &tools.ImageModifyProperties{
+        Transparency: &transparency,
+    },
+})
+
+fmt.Printf("Modified properties: %v\n", output.ModifiedProperties)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
