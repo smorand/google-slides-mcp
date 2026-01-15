@@ -1149,3 +1149,41 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-15 - US-00034 - Implement tool to replace image
+
+**Status:** Success
+
+**What was implemented:**
+- New `replace_image` MCP tool to replace existing images with new content while preserving position and optionally size
+- Input accepts presentation_id, object_id, image_base64, and optional preserve_size (default true)
+- Strategy: delete old image and create new one at same position/size (no in-place image update in Slides API)
+- Preserves original position via AffineTransform (translateX, translateY, scaleX, scaleY, shearX, shearY)
+- Preserves original size when preserve_size is true by copying Size from old element
+- Uploads new image to Google Drive first using UploadFile, then makes publicly accessible via MakeFilePublic
+- Automatically detects image MIME type from magic bytes (PNG, JPEG, GIF, WebP, BMP) using detectImageMimeType
+- Returns new object ID since replacement creates a new object via CreateImageRequest
+- MakeFilePublic failure is non-fatal (logged as warning, operation continues)
+- Comprehensive validation for empty inputs and object type verification
+- Sentinel errors for all failure modes (invalid data, not found, not an image, upload failed, etc.)
+- Comprehensive test suite with 20 test cases covering all scenarios including nested groups
+
+**Files changed:**
+- `internal/tools/replace_image.go` - replace_image tool implementation with ReplaceImageInput, ReplaceImageOutput types, buildReplaceImageRequests helper
+- `internal/tools/replace_image_test.go` - Comprehensive tests (16 TestReplaceImage + 4 TestBuildReplaceImageRequests test cases)
+- `CLAUDE.md` - Added replace_image documentation with input/output examples, features, sentinel errors, usage patterns
+- `README.md` - Added full replace_image tool documentation with parameters, supported formats, examples, and errors
+- `stories.yaml` - Marked US-00034 as passes: true
+
+**Learnings:**
+- Google Slides API has no direct image content replacement - must delete and recreate
+- BatchUpdate with DeleteObjectRequest followed by CreateImageRequest achieves atomic replacement
+- CreateImageRequest URL must be publicly accessible; using Drive download URL format
+- When copying transform, must handle case where old element has no transform (use default values)
+- Unit field in AffineTransform defaults to empty; must set to "EMU" explicitly
+- generateImageObjectID uses nanosecond timestamp for unique object IDs
+- Test factory functions must use exact types (oauth2.TokenSource, io.Reader) not interfaces
+
+**Remaining issues:** None
+
+---

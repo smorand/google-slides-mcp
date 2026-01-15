@@ -2487,6 +2487,78 @@ output, err := tools.ModifyImage(ctx, tokenSource, tools.ModifyImageInput{
 fmt.Printf("Modified properties: %v\n", output.ModifiedProperties)
 ```
 
+### replace_image Tool (`replace_image.go`)
+Replaces an existing image with a new one while optionally preserving size and position.
+
+**Input:**
+```go
+tools.ReplaceImageInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "image-object-id",  // Required - ID of the image to replace
+    ImageBase64:    "base64-data...",   // Required - base64 encoded new image data
+    PreserveSize:   &true,              // Optional - preserve original size (default true)
+}
+```
+
+**Output:**
+```go
+tools.ReplaceImageOutput{
+    ObjectID:      "image-object-id",      // Original object ID
+    NewObjectID:   "new-image-object-id",  // New object ID (if changed)
+    PreservedSize: true,                   // Whether size was preserved
+}
+```
+
+**Features:**
+- Replaces image content by deleting old image and creating new one at same position
+- Preserves original position via AffineTransform (translateX, translateY, scale, shear)
+- Preserves original size when preserve_size is true (default)
+- Uploads new image to Google Drive first, then references it in Slides
+- Makes uploaded image publicly accessible for Slides API to read
+- Automatically detects image MIME type from magic bytes (PNG, JPEG, GIF, WebP, BMP)
+- Returns new object ID since image replacement creates a new object
+
+**Sentinel Errors:**
+```go
+tools.ErrReplaceImageFailed    // Generic replacement failure
+tools.ErrNotImageObject        // Object is not an image
+tools.ErrInvalidImageData      // Invalid base64 or unknown image format
+tools.ErrImageUploadFailed     // Failed to upload image to Drive
+tools.ErrObjectNotFound        // Object not found in presentation
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+tools.ErrDriveAPIError         // Drive API errors
+```
+
+**Usage Pattern:**
+```go
+// Replace image with new content, preserving size and position
+imageBase64 := base64.StdEncoding.EncodeToString(newImageData)
+output, err := tools.ReplaceImage(ctx, tokenSource, tools.ReplaceImageInput{
+    PresentationID: "abc123",
+    ObjectID:       "image-xyz",
+    ImageBase64:    imageBase64,
+})
+
+// Replace image without preserving size (use new image's natural size)
+preserveSize := false
+output, err := tools.ReplaceImage(ctx, tokenSource, tools.ReplaceImageInput{
+    PresentationID: "abc123",
+    ObjectID:       "image-xyz",
+    ImageBase64:    imageBase64,
+    PreserveSize:   &preserveSize,
+})
+
+// Check if object ID changed
+if output.NewObjectID != "" {
+    fmt.Printf("Image replaced, new ID: %s\n", output.NewObjectID)
+} else {
+    fmt.Printf("Image replaced, same ID: %s\n", output.ObjectID)
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

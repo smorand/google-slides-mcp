@@ -836,7 +836,7 @@
   - Position is preserved
   - New image displays correctly
   - 'Command: go test ./internal/tools/... -run TestReplaceImage passes'
-  passes: false
+  passes: true
 - id: US-00035
   title: Implement tool to create shape
   priority: 9

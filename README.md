@@ -2843,6 +2843,102 @@ Set transparency for watermark effect:
 - `access denied to presentation` - No permission to modify
 - `failed to modify image` - API error during modification
 
+#### `replace_image`
+
+Replace an existing image with a new one while optionally preserving size and position.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "image_1234567890",
+  "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "preserve_size": true
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | Object ID of the image to replace |
+| `image_base64` | string | Yes | Base64-encoded image data |
+| `preserve_size` | boolean | No | Whether to preserve original size (default: true) |
+
+**Output:**
+```json
+{
+  "object_id": "image_1234567890",
+  "new_object_id": "image_9876543210",
+  "preserved_size": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The original image's object ID |
+| `new_object_id` | string | The new image's object ID (always set since replacement creates new object) |
+| `preserved_size` | boolean | Whether the original size was preserved |
+
+**Supported Image Formats:**
+| Format | Magic Bytes |
+|--------|-------------|
+| PNG | `89 50 4E 47` |
+| JPEG | `FF D8 FF` |
+| GIF | `47 49 46` (GIF) |
+| WebP | `52 49 46 46...57 45 42 50` (RIFF...WEBP) |
+| BMP | `42 4D` (BM) |
+
+**Features:**
+- Replaces image content by deleting old image and creating new one at same position
+- Preserves original position via AffineTransform (translateX, translateY, scale, shear)
+- Preserves original size when preserve_size is true (default)
+- Uploads new image to Google Drive first, then references it in Slides API
+- Makes uploaded image publicly accessible for Slides API to read
+- Automatically detects image MIME type from magic bytes
+- Returns new object ID since image replacement creates a new object
+
+**Use Cases:**
+- Updating placeholder images with final versions
+- Replacing logos or branding images across presentations
+- Swapping out outdated screenshots or diagrams
+- Updating charts or graphs with new data visualizations
+- Replacing draft images with production-ready versions
+
+**Examples:**
+
+Replace image preserving original size:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image_xyz",
+  "image_base64": "iVBORw0KGgo...",
+  "preserve_size": true
+}
+```
+
+Replace image using new image's natural size:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image_xyz",
+  "image_base64": "iVBORw0KGgo...",
+  "preserve_size": false
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `object not found: object_id is required` - Empty object ID
+- `invalid image data: image_base64 is required` - Empty image data
+- `invalid image data: illegal base64 data` - Malformed base64 encoding
+- `invalid image data: unable to detect image format` - Unrecognized image format
+- `object not found: object 'xyz' not found in presentation` - Object doesn't exist
+- `object is not an image: object 'xyz' is not an image (type: TEXT_BOX)` - Object is not an image
+- `failed to upload image` - Drive API upload failed
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to replace image` - API error during replacement
+
 ---
 
 - `create_shape` - Add shapes
