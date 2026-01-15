@@ -277,6 +277,72 @@ auth.APIKeyRecord{
 - `https://www.googleapis.com/auth/drive` - Drive API
 - `https://www.googleapis.com/auth/cloud-translation` - Translate API
 
+## Middleware Package
+
+The `internal/middleware/` package provides API key validation for protected endpoints:
+
+### API Key Middleware (`apikey.go`)
+- Validates `Authorization: Bearer <api_key>` header
+- Lookups API key in Firestore via `APIKeyStoreInterface`
+- Creates OAuth2 `TokenSource` from stored refresh token
+- Caches validated tokens with configurable TTL (default 5 min)
+- Updates `last_used` timestamp asynchronously
+- Adds authenticated data to request context
+
+### Context Values
+The middleware adds these values to the request context:
+- `APIKeyContextKey` - The validated API key string
+- `RefreshTokenContextKey` - The associated refresh token
+- `UserEmailContextKey` - The user's email address
+- `TokenSourceContextKey` - OAuth2 `TokenSource` for API calls
+
+### Helper Functions
+```go
+// Retrieve values from context
+apiKey := middleware.GetAPIKey(ctx)
+refreshToken := middleware.GetRefreshToken(ctx)
+userEmail := middleware.GetUserEmail(ctx)
+tokenSource := middleware.GetTokenSource(ctx)
+```
+
+### Configuration
+```go
+middleware.APIKeyMiddlewareConfig{
+    Store:             store,                // APIKeyStoreInterface implementation
+    OAuthClientID:     "client-id",          // For token refresh
+    OAuthClientSecret: "client-secret",      // For token refresh
+    CacheTTL:          5 * time.Minute,      // Token cache TTL
+    UpdateLastUsed:    true,                 // Update last_used timestamp
+    Logger:            slog.Default(),       // Logger instance
+}
+```
+
+### Integration with Server
+```go
+// Create middleware
+apiKeyMiddleware := middleware.NewAPIKeyMiddleware(config)
+
+// Attach to server
+server.SetAPIKeyMiddleware(apiKeyMiddleware)
+```
+
+### Error Responses
+- `401 Unauthorized` - Missing/invalid Authorization header
+- `401 Unauthorized` - API key not found in store
+- `500 Internal Server Error` - Store lookup failure
+
+### Cache Management
+```go
+// Invalidate specific key (e.g., after user logout)
+apiKeyMiddleware.InvalidateCache(apiKey)
+
+// Clear entire cache
+apiKeyMiddleware.ClearCache()
+
+// Check cache size
+size := apiKeyMiddleware.CacheSize()
+```
+
 ## Testing Locally
 
 1. Set up OAuth2 credentials in Secret Manager

@@ -231,6 +231,9 @@ API keys are stored in Firestore with the following structure:
 - CSRF protection via cryptographic state parameter
 - State tokens are single-use (consumed after callback)
 - Refresh tokens enable offline access without re-authentication
+- API key validation middleware protects all MCP endpoints
+- Token caching with TTL reduces Firestore reads
+- Last-used timestamp tracking for key activity monitoring
 
 ## Available MCP Tools
 

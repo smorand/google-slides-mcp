@@ -48,16 +48,22 @@ type AuthHandler interface {
 	HandleCallback(w http.ResponseWriter, r *http.Request)
 }
 
+// APIKeyMiddleware is the interface for API key validation middleware.
+type APIKeyMiddleware interface {
+	Middleware(next http.HandlerFunc) http.HandlerFunc
+}
+
 // Server represents the HTTP streamable MCP server.
 type Server struct {
-	config      ServerConfig
-	httpServer  *http.Server
-	mux         *http.ServeMux
-	handler     *MCPHandler
-	authHandler AuthHandler
-	logger      *slog.Logger
-	mu          sync.RWMutex
-	running     bool
+	config           ServerConfig
+	httpServer       *http.Server
+	mux              *http.ServeMux
+	handler          *MCPHandler
+	authHandler      AuthHandler
+	apiKeyMiddleware APIKeyMiddleware
+	logger           *slog.Logger
+	mu               sync.RWMutex
+	running          bool
 }
 
 // NewServer creates a new MCP HTTP server.
@@ -97,19 +103,31 @@ func NewServer(config ServerConfig) *Server {
 
 // setupRoutes configures all HTTP routes.
 func (s *Server) setupRoutes() {
-	// Health check endpoint
+	// Health check endpoint (no auth required)
 	s.mux.HandleFunc("/health", s.handleHealth)
 
-	// MCP protocol endpoint (POST for tool calls)
-	s.mux.HandleFunc("/mcp", s.withMiddleware(s.handleMCP))
+	// MCP protocol endpoint (POST for tool calls) - requires API key
+	s.mux.HandleFunc("/mcp", s.withMiddleware(s.withAPIKeyAuth(s.handleMCP)))
 
-	// MCP initialize endpoint
-	s.mux.HandleFunc("/mcp/initialize", s.withMiddleware(s.handleMCPInitialize))
+	// MCP initialize endpoint - requires API key
+	s.mux.HandleFunc("/mcp/initialize", s.withMiddleware(s.withAPIKeyAuth(s.handleMCPInitialize)))
 
-	// OAuth2 authentication endpoints (only if auth handler is set)
+	// OAuth2 authentication endpoints (only if auth handler is set) - no API key required
 	if s.authHandler != nil {
 		s.mux.HandleFunc("/auth", s.withMiddleware(s.handleAuth))
 		s.mux.HandleFunc("/auth/callback", s.withMiddleware(s.handleAuthCallback))
+	}
+}
+
+// withAPIKeyAuth wraps a handler with API key authentication.
+func (s *Server) withAPIKeyAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.apiKeyMiddleware != nil {
+			s.apiKeyMiddleware.Middleware(next)(w, r)
+		} else {
+			// No API key middleware configured, proceed without auth
+			next(w, r)
+		}
 	}
 }
 
@@ -121,6 +139,11 @@ func (s *Server) SetAuthHandler(handler AuthHandler) {
 		s.mux.HandleFunc("/auth", s.withMiddleware(s.handleAuth))
 		s.mux.HandleFunc("/auth/callback", s.withMiddleware(s.handleAuthCallback))
 	}
+}
+
+// SetAPIKeyMiddleware sets the API key validation middleware.
+func (s *Server) SetAPIKeyMiddleware(middleware APIKeyMiddleware) {
+	s.apiKeyMiddleware = middleware
 }
 
 // handleAuth handles the /auth endpoint.
