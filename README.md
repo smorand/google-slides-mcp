@@ -177,12 +177,38 @@ make undeploy  # Destroy all resources
 
 ## Authentication Flow
 
-1. User visits `/auth` endpoint
-2. Server redirects to Google OAuth2 consent screen
-3. User grants permissions (Slides, Drive, Translate APIs)
-4. OAuth2 callback exchanges code for tokens
-5. Server generates and returns an API key
-6. User includes API key in subsequent requests
+The server uses OAuth2 with Google for user authentication:
+
+### Flow Steps
+
+1. **Initiate Flow**: Client calls `GET /auth`
+2. **Get Authorization URL**: Server returns JSON with `authorization_url`
+   ```json
+   {
+     "authorization_url": "https://accounts.google.com/o/oauth2/auth?...",
+     "message": "Please visit the authorization URL to complete authentication"
+   }
+   ```
+3. **User Consent**: User visits the URL and grants permissions for:
+   - Google Slides API (read/write presentations)
+   - Google Drive API (search, copy, share files)
+   - Google Cloud Translation API (translate content)
+4. **Callback**: Google redirects to `/auth/callback` with authorization code
+5. **Token Exchange**: Server exchanges code for access and refresh tokens
+6. **API Key Generation**: Server generates API key (implemented in US-00006)
+7. **Subsequent Requests**: Include `Authorization: Bearer <api_key>` header
+
+### Required OAuth2 Scopes
+
+- `https://www.googleapis.com/auth/presentations` - Full Slides access
+- `https://www.googleapis.com/auth/drive` - Full Drive access
+- `https://www.googleapis.com/auth/cloud-translation` - Translation API
+
+### Security Features
+
+- CSRF protection via cryptographic state parameter
+- State tokens are single-use (consumed after callback)
+- Refresh tokens enable offline access without re-authentication
 
 ## Available MCP Tools
 

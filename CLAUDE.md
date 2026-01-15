@@ -206,6 +206,47 @@ transport.JSONRPCRequest{
 - `GET /health` - Health check, returns `{"status": "healthy"}`
 - `POST /mcp/initialize` - MCP handshake
 - `POST /mcp` - Tool calls (tools/list, tools/call)
+- `GET /auth` - Initiate OAuth2 flow, returns authorization URL
+- `GET /auth/callback` - OAuth2 callback endpoint
+
+## Auth Package
+
+The `internal/auth/` package provides OAuth2 authentication:
+
+### OAuth Handler (`oauth.go`)
+- OAuth2 flow with Google endpoints
+- CSRF protection via state parameter
+- Configurable scopes (Slides, Drive, Translate APIs)
+- Token callback hook for post-authentication processing
+
+### Secret Loader (`secrets.go`)
+- Load OAuth credentials from Google Secret Manager
+- Support for environment-based configuration in development
+
+### Key Types
+```go
+// OAuth configuration
+auth.OAuthConfig{
+    ClientID:     "your-client-id",
+    ClientSecret: "your-client-secret",
+    RedirectURI:  "http://localhost:8080/auth/callback",
+    Scopes:       auth.DefaultScopes,  // Optional, uses default if empty
+}
+
+// Create handler
+handler := auth.NewOAuthHandler(config, logger)
+
+// Set callback for when tokens are obtained
+handler.SetOnTokenFunc(func(ctx context.Context, token *oauth2.Token) error {
+    // Store token, generate API key, etc.
+    return nil
+})
+```
+
+### Default Scopes
+- `https://www.googleapis.com/auth/presentations` - Slides API
+- `https://www.googleapis.com/auth/drive` - Drive API
+- `https://www.googleapis.com/auth/cloud-translation` - Translate API
 
 ## Testing Locally
 

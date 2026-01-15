@@ -42,15 +42,22 @@ func DefaultServerConfig() ServerConfig {
 	}
 }
 
+// AuthHandler is the interface for OAuth authentication handlers.
+type AuthHandler interface {
+	HandleAuth(w http.ResponseWriter, r *http.Request)
+	HandleCallback(w http.ResponseWriter, r *http.Request)
+}
+
 // Server represents the HTTP streamable MCP server.
 type Server struct {
-	config     ServerConfig
-	httpServer *http.Server
-	mux        *http.ServeMux
-	handler    *MCPHandler
-	logger     *slog.Logger
-	mu         sync.RWMutex
-	running    bool
+	config      ServerConfig
+	httpServer  *http.Server
+	mux         *http.ServeMux
+	handler     *MCPHandler
+	authHandler AuthHandler
+	logger      *slog.Logger
+	mu          sync.RWMutex
+	running     bool
 }
 
 // NewServer creates a new MCP HTTP server.
@@ -98,6 +105,48 @@ func (s *Server) setupRoutes() {
 
 	// MCP initialize endpoint
 	s.mux.HandleFunc("/mcp/initialize", s.withMiddleware(s.handleMCPInitialize))
+
+	// OAuth2 authentication endpoints (only if auth handler is set)
+	if s.authHandler != nil {
+		s.mux.HandleFunc("/auth", s.withMiddleware(s.handleAuth))
+		s.mux.HandleFunc("/auth/callback", s.withMiddleware(s.handleAuthCallback))
+	}
+}
+
+// SetAuthHandler sets the OAuth authentication handler.
+func (s *Server) SetAuthHandler(handler AuthHandler) {
+	s.authHandler = handler
+	// Re-register auth routes
+	if handler != nil {
+		s.mux.HandleFunc("/auth", s.withMiddleware(s.handleAuth))
+		s.mux.HandleFunc("/auth/callback", s.withMiddleware(s.handleAuthCallback))
+	}
+}
+
+// handleAuth handles the /auth endpoint.
+func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
+	if s.authHandler == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "authentication not configured",
+		})
+		return
+	}
+	s.authHandler.HandleAuth(w, r)
+}
+
+// handleAuthCallback handles the /auth/callback endpoint.
+func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
+	if s.authHandler == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "authentication not configured",
+		})
+		return
+	}
+	s.authHandler.HandleCallback(w, r)
 }
 
 // withMiddleware wraps a handler with logging and CORS middleware.
