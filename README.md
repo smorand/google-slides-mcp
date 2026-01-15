@@ -1519,10 +1519,120 @@ Get an image's properties:
 
 ---
 
+#### `add_text_box`
+
+Add a text box to a slide with optional styling.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 1,
+  "text": "Hello World",
+  "position": {"x": 100, "y": 50},
+  "size": {"width": 300, "height": 100},
+  "style": {
+    "font_family": "Arial",
+    "font_size": 24,
+    "bold": true,
+    "italic": false,
+    "color": "#FF0000"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No* | 1-based index of the target slide |
+| `slide_id` | string | No* | Object ID of the target slide |
+| `text` | string | Yes | Text content for the text box |
+| `position` | object | No | Position in points (default: 0, 0) |
+| `position.x` | number | No | X coordinate in points from left edge |
+| `position.y` | number | No | Y coordinate in points from top edge |
+| `size` | object | Yes | Size in points |
+| `size.width` | number | Yes | Width in points (must be > 0) |
+| `size.height` | number | Yes | Height in points (must be > 0) |
+| `style` | object | No | Text styling options |
+| `style.font_family` | string | No | Font family name (e.g., "Arial") |
+| `style.font_size` | integer | No | Font size in points |
+| `style.bold` | boolean | No | Bold text |
+| `style.italic` | boolean | No | Italic text |
+| `style.color` | string | No | Hex color string (e.g., "#FF0000") |
+
+*Either `slide_index` or `slide_id` must be provided.
+
+**Output:**
+```json
+{
+  "object_id": "textbox_1234567890123456"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | Unique identifier of the created text box |
+
+**Features:**
+- Uses either 1-based slide index or slide ID for flexibility
+- Position defaults to (0, 0) if not specified
+- Size is required with positive width and height
+- Styling is optional - only specified style fields are applied
+- Standard slide dimensions: 720x405 points
+- 1 point = 12700 EMU (English Metric Units)
+
+**Use Cases:**
+- Add titles and headings to slides
+- Insert body text content
+- Create annotations or labels
+- Add styled captions
+- Place text at specific positions
+
+**Examples:**
+
+Add a simple text box:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "text": "Hello World",
+  "size": {"width": 200, "height": 50}
+}
+```
+
+Add a styled title:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_id": "g123456",
+  "text": "Quarterly Report",
+  "position": {"x": 110, "y": 20},
+  "size": {"width": 500, "height": 60},
+  "style": {
+    "font_family": "Arial",
+    "font_size": 36,
+    "bold": true,
+    "color": "#0000FF"
+  }
+}
+```
+
+**Errors:**
+- `text content is required` - Empty text provided
+- `size (width and height) is required` - Size missing or dimensions ≤ 0
+- `invalid slide reference: either slide_index or slide_id must be provided` - Neither slide reference provided
+- `slide not found` - Slide index out of range or slide ID not found
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to add text box` - API error during creation
+
+---
+
 *More tools to be documented:*
 
 ### Content Manipulation
-- `add_text_box` - Add text elements
+- `add_text` - Add text to existing placeholders
 - `modify_text` - Edit text content
 - `search_text` - Find text across presentation
 - `replace_text` - Find and replace text

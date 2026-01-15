@@ -1408,6 +1408,101 @@ case "VIDEO":
 }
 ```
 
+### add_text_box Tool (`add_text_box.go`)
+Adds a text box to a slide with optional styling.
+
+**Input:**
+```go
+tools.AddTextBoxInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    Text:           "Hello World",      // Required - text content
+    Position:       &PositionInput{X: 100, Y: 50},   // Position in points (default: 0, 0)
+    Size:           &SizeInput{Width: 300, Height: 100},  // Required - size in points
+    Style:          &TextStyleInput{...},  // Optional styling
+}
+
+// Position in points (standard slide is 720x405 points)
+tools.PositionInput{
+    X: 100,  // Points from left edge
+    Y: 50,   // Points from top edge
+}
+
+// Size in points
+tools.SizeInput{
+    Width:  300,  // Width in points
+    Height: 100,  // Height in points
+}
+
+// Optional text styling
+tools.TextStyleInput{
+    FontFamily: "Arial",       // Font family name
+    FontSize:   24,            // Font size in points
+    Bold:       true,          // Bold text
+    Italic:     false,         // Italic text
+    Color:      "#FF0000",     // Hex color string
+}
+```
+
+**Output:**
+```go
+tools.AddTextBoxOutput{
+    ObjectID: "textbox_1234567890",  // Unique ID of the created text box
+}
+```
+
+**Features:**
+- Accepts either 1-based slide index OR slide ID for identification
+- Position defaults to (0, 0) if not specified
+- Size is required with positive width and height
+- Styling is optional - only specified style fields are applied
+- Uses CreateShapeRequest with TEXT_BOX type
+- Uses InsertTextRequest to add text content
+- Uses UpdateTextStyleRequest for styling (if provided)
+- 1 point = 12700 EMU (English Metric Units)
+
+**Sentinel Errors:**
+```go
+tools.ErrAddTextBoxFailed       // Generic text box creation failure
+tools.ErrInvalidText            // Text content is required (empty text)
+tools.ErrInvalidSize            // Size is required with positive width and height
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Add simple text box by slide index
+output, err := tools.AddTextBox(ctx, tokenSource, tools.AddTextBoxInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    Text:           "Hello World",
+    Size:           &tools.SizeInput{Width: 200, Height: 50},
+})
+
+// Add styled text box by slide ID
+output, err := tools.AddTextBox(ctx, tokenSource, tools.AddTextBoxInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+    Text:           "Important Title",
+    Position:       &tools.PositionInput{X: 100, Y: 50},
+    Size:           &tools.SizeInput{Width: 500, Height: 80},
+    Style: &tools.TextStyleInput{
+        FontFamily: "Arial",
+        FontSize:   36,
+        Bold:       true,
+        Color:      "#0000FF",
+    },
+})
+
+fmt.Printf("Created text box: %s\n", output.ObjectID)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
