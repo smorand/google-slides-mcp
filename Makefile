@@ -1,4 +1,5 @@
 .PHONY: build build-all install install-launcher uninstall clean clean-all rebuild test fmt vet lint check run info help list-commands
+.PHONY: plan deploy undeploy init-plan init-deploy init-destroy update-backend
 
 # Detect current platform
 GOOS=$(shell go env GOOS)
@@ -486,3 +487,43 @@ endif
 	@echo "  -darwin-arm64  - macOS (Apple Silicon)"
 	@echo ""
 	@echo "Launcher scripts (.sh) automatically detect platform and execute the right binary."
+	@echo ""
+	@echo "Terraform targets (see terraform/ directory):"
+	@echo "  plan             - Plan main infrastructure"
+	@echo "  deploy           - Deploy main infrastructure"
+	@echo "  undeploy         - Destroy main infrastructure"
+	@echo "  init-plan        - Plan initialization"
+	@echo "  init-deploy      - Deploy initialization"
+	@echo "  init-destroy     - Destroy initialization (careful!)"
+	@echo "  update-backend   - Regenerate backend configuration"
+
+# ============================================
+# TERRAFORM TARGETS
+# ============================================
+
+# IAC targets (main infrastructure)
+plan:
+	@echo "Planning main infrastructure..."
+	cd terraform && terraform init && terraform plan
+
+deploy:
+	@echo "Deploying main infrastructure..."
+	cd terraform && terraform init && terraform apply -auto-approve
+
+undeploy:
+	@echo "Destroying main infrastructure..."
+	cd terraform && terraform destroy -auto-approve
+
+# Init targets (backend, state, service accounts)
+# Note: For this project, we use a single terraform folder structure
+# The init targets are aliases for the main terraform folder
+init-plan: plan
+
+init-deploy: deploy
+
+init-destroy: undeploy
+
+# Update backend configuration (manual trigger)
+update-backend:
+	@echo "Backend configuration is managed in terraform/provider.tf"
+	@echo "Uncomment the backend block after initial deployment"

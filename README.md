@@ -108,14 +108,49 @@ make check
 
 ### Deployment
 
-The server is designed to be deployed on Google Cloud Run. See the `terraform/` directory for infrastructure configuration.
+The server is designed to be deployed on Google Cloud Run. Infrastructure is managed with Terraform.
+
+#### Prerequisites
+
+1. A GCP project with billing enabled
+2. `gcloud` CLI configured with project access
+3. Terraform 1.0+ installed
+
+#### Infrastructure Setup
 
 ```bash
-# Deploy infrastructure
-cd terraform
-terraform init
-terraform plan
-terraform apply
+# 1. Update configuration
+# Edit terraform/config.yaml with your GCP project ID
+vim terraform/config.yaml
+
+# 2. Initialize and deploy infrastructure
+make plan    # Preview changes
+make deploy  # Apply changes
+
+# 3. Add OAuth2 credentials to Secret Manager
+# After creating OAuth2 credentials in GCP Console:
+gcloud secrets versions add gslides-dev-oauth-client-id --data-file=client_id.txt
+gcloud secrets versions add gslides-dev-oauth-client-secret --data-file=client_secret.txt
+gcloud secrets versions add gslides-dev-oauth-redirect-uri --data-file=redirect_uri.txt
+
+# 4. Deploy the container image (via CI/CD or manual)
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/gslides-mcp:latest
+```
+
+#### Terraform Resources Created
+
+| Resource | Description |
+|----------|-------------|
+| Cloud Run Service | MCP server with auto-scaling |
+| Firestore Database | API keys and refresh tokens |
+| Secret Manager | OAuth2 credentials |
+| Service Accounts | Cloud Run and Cloud Build |
+| IAM Roles | Least-privilege permissions |
+
+#### Destroying Infrastructure
+
+```bash
+make undeploy  # Destroy all resources
 ```
 
 ## Authentication Flow

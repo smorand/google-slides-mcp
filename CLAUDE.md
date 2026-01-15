@@ -14,6 +14,11 @@ make fmt      # Format code
 make vet      # Run go vet
 make check    # Run all checks (fmt, vet, lint, test)
 make clean    # Remove build artifacts
+
+# Terraform commands
+make plan     # Plan infrastructure changes
+make deploy   # Deploy infrastructure
+make undeploy # Destroy infrastructure
 ```
 
 ## Project Structure
@@ -31,7 +36,15 @@ google-slides-mcp/
 │   ├── tools/               # MCP tool implementations
 │   └── transport/           # HTTP server, MCP protocol
 ├── pkg/                     # Public APIs (if any)
-├── terraform/               # GCP infrastructure
+├── terraform/               # GCP infrastructure (Terraform)
+│   ├── config.yaml         # Configuration file
+│   ├── provider.tf         # Provider and backend config
+│   ├── local.tf            # Local variables from config
+│   ├── apis.tf             # API enablement
+│   ├── iam.tf              # Service accounts and roles
+│   ├── cloudrun.tf         # Cloud Run service
+│   ├── firestore.tf        # Firestore database
+│   └── secrets.tf          # Secret Manager secrets
 └── scripts/                 # Utility scripts
 ```
 
@@ -107,6 +120,41 @@ Terraform manages GCP infrastructure:
 - Secret Manager secrets
 - IAM roles
 
+### Terraform Structure
+
+The `terraform/` folder follows feature-based organization:
+- `config.yaml` - Single source of configuration
+- `provider.tf` - Google provider and backend
+- `local.tf` - Loads config.yaml, defines derived values
+- `apis.tf` - Enables required Google APIs
+- `iam.tf` - Service accounts for Cloud Run and Cloud Build
+- `cloudrun.tf` - MCP server deployment
+- `firestore.tf` - Database for API keys and tokens
+- `secrets.tf` - OAuth2 credentials storage
+
+### Deployment Commands
+
+```bash
+# Initialize and deploy
+cd terraform
+terraform init
+terraform plan
+terraform apply
+
+# Or use Makefile
+make plan    # Preview changes
+make deploy  # Apply changes
+make undeploy # Destroy resources
+```
+
+### Configuration
+
+Edit `terraform/config.yaml` to customize:
+- `gcp.project_id` - Your GCP project ID
+- `gcp.location` - Region (default: europe-west1)
+- `gcp.resources.cloud_run.*` - CPU, memory, scaling
+- `parameters.*` - Application environment variables
+
 ## Key Design Decisions
 
 1. **HTTP Streamable vs SSE**: Using chunked transfer for better compatibility
@@ -175,6 +223,15 @@ transport.JSONRPCRequest{
 ### Modifying Infrastructure
 
 1. Edit files in `terraform/`
-2. Run `terraform plan` to preview
-3. Run `terraform apply` to deploy
+2. Run `make plan` to preview changes
+3. Run `make deploy` to apply
 4. Verify in GCP Console
+
+### Adding New Terraform Resources
+
+Follow the feature-based pattern:
+1. Create new `<feature>.tf` file
+2. Structure: locals -> resources -> permissions -> outputs
+3. Use `local.resource_prefix` for naming
+4. Apply `local.common_labels` for tracking
+5. Run `terraform validate` before committing

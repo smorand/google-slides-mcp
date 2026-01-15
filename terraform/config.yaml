@@ -1,0 +1,70 @@
+# Google Slides MCP Server - Terraform Configuration
+# This file contains all required variables for terraform deployment
+
+# ============================================
+# GLOBAL CONFIGURATION
+# ============================================
+
+# Project prefix (used for resource naming)
+prefix: gslides
+
+# Environment: dev, staging, prod
+env: dev
+
+# Human-readable project description
+description: Google Slides MCP Server - HTTP streamable MCP server for Google Slides API
+
+# ============================================
+# GCP CONFIGURATION
+# ============================================
+
+gcp:
+  # GCP Project ID (MUST exist - created via Console or gcloud)
+  # Update this to your actual GCP project ID
+  project_id: gslides-mcp-dev
+
+  # Location for multi-region resources (GCS, Firestore)
+  location: europe-west1
+
+  # APIs/Services to enable on the project
+  services:
+    - storage.googleapis.com
+    - logging.googleapis.com
+    - cloudresourcemanager.googleapis.com
+    - iam.googleapis.com
+    - cloudbuild.googleapis.com
+    - run.googleapis.com
+    - firestore.googleapis.com
+    - secretmanager.googleapis.com
+    - slides.googleapis.com
+    - drive.googleapis.com
+    - translate.googleapis.com
+    - iamcredentials.googleapis.com
+
+  # Cloud Run resource specifications
+  resources:
+    cloud_run:
+      region: europe-west1
+      cpu: "1000m"
+      memory: "512Mi"
+      min_instances: 0
+      max_instances: 10
+      timeout_seconds: 300
+      container_concurrency: 80
+
+  # GCP-specific parameters
+  parameters:
+    enable_private_services: false
+    log_retention_days: 30
+    firestore_location: eur3
+
+# ============================================
+# APPLICATION CONFIGURATION
+# ============================================
+
+# Application parameters (injected as environment variables)
+parameters:
+  log_level: info
+  rate_limit_rps: 100
+  cache_ttl_minutes: 5
+  token_cache_ttl_minutes: 55
