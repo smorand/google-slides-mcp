@@ -1271,6 +1271,143 @@ for _, obj := range output.Objects {
 }
 ```
 
+### get_object Tool (`get_object.go`)
+Gets detailed information about a specific object by ID.
+
+**Input:**
+```go
+tools.GetObjectInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "object-id",        // Required
+}
+```
+
+**Output:**
+```go
+tools.GetObjectOutput{
+    PresentationID: "presentation-id",
+    ObjectID:       "object-id",
+    ObjectType:     "TEXT_BOX",         // Shape type, IMAGE, VIDEO, TABLE, LINE, GROUP, SHEETS_CHART, WORD_ART
+    SlideIndex:     1,                  // 1-based index of containing slide
+    Position:       &Position{X: 100, Y: 50},
+    Size:           &Size{Width: 300, Height: 100},
+    Shape:          *ShapeDetails{...},  // Set for shapes
+    Image:          *ImageDetails{...},  // Set for images
+    Table:          *TableDetails{...},  // Set for tables
+    Video:          *VideoDetails{...},  // Set for videos
+    Line:           *LineDetails{...},   // Set for lines
+    Group:          *GroupDetails{...},  // Set for groups
+    Chart:          *ChartDetails{...},  // Set for Sheets charts
+    WordArt:        *WordArtDetails{...},// Set for word art
+}
+```
+
+**Type-Specific Details:**
+
+For **shapes**:
+```go
+tools.ShapeDetails{
+    ShapeType:       "TEXT_BOX",
+    Text:            "Content text",
+    TextStyle:       &TextStyleDetails{FontFamily: "Arial", FontSize: 24, Bold: true, Color: "#FF0000"},
+    Fill:            &FillDetails{Type: "SOLID", SolidColor: "#007FFF"},
+    Outline:         &OutlineDetails{Color: "#000000", Weight: 2.0, DashStyle: "SOLID"},
+    PlaceholderType: "TITLE",  // For placeholder shapes
+}
+```
+
+For **images**:
+```go
+tools.ImageDetails{
+    ContentURL:   "https://...",
+    SourceURL:    "https://...",
+    Brightness:   0.5,
+    Contrast:     0.3,
+    Transparency: 0.1,
+    Recolor:      "GRAYSCALE",
+    Crop:         &CropDetails{Top: 0.1, Bottom: 0.2, Left: 0.05, Right: 0.15},
+}
+```
+
+For **tables**:
+```go
+tools.TableDetails{
+    Rows:    3,
+    Columns: 4,
+    Cells:   [][]CellDetails{...},  // 2D array of cell details with text, spans, background
+}
+```
+
+For **videos**:
+```go
+tools.VideoDetails{
+    VideoID:   "dQw4w9WgXcQ",
+    Source:    "YOUTUBE",  // Or "DRIVE"
+    URL:       "https://...",
+    StartTime: 30.0,   // seconds
+    EndTime:   60.0,   // seconds
+    Autoplay:  true,
+    Mute:      false,
+}
+```
+
+For **lines**:
+```go
+tools.LineDetails{
+    LineType:   "STRAIGHT_CONNECTOR_1",
+    StartArrow: "ARROW",
+    EndArrow:   "NONE",
+    Color:      "#0000FF",
+    Weight:     3.0,
+    DashStyle:  "DASH",
+}
+```
+
+For **groups**:
+```go
+tools.GroupDetails{
+    ChildCount: 3,
+    ChildIDs:   []string{"child-1", "child-2", "child-3"},
+}
+```
+
+**Features:**
+- Returns complete object properties based on object type
+- Finds objects anywhere in the presentation (including nested in groups)
+- Position and size returned in points (converted from EMU)
+- Colors returned as hex strings (#RRGGBB) or theme references (theme:ACCENT1)
+- Video times converted from milliseconds to seconds
+
+**Sentinel Errors:**
+```go
+tools.ErrObjectNotFound         // Object ID not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to access
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Get details for any object by ID
+output, err := tools.GetObject(ctx, tokenSource, tools.GetObjectInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+})
+
+// Check object type and access appropriate details
+switch output.ObjectType {
+case "TEXT_BOX", "RECTANGLE":
+    fmt.Printf("Text: %s, Font: %s\n", output.Shape.Text, output.Shape.TextStyle.FontFamily)
+case "IMAGE":
+    fmt.Printf("Image URL: %s, Brightness: %.1f\n", output.Image.ContentURL, output.Image.Brightness)
+case "TABLE":
+    fmt.Printf("Table: %dx%d\n", output.Table.Rows, output.Table.Columns)
+case "VIDEO":
+    fmt.Printf("Video: %s (%s), Start: %.0fs\n", output.Video.VideoID, output.Video.Source, output.Video.StartTime)
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

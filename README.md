@@ -1314,6 +1314,211 @@ Combined filter - images from first slide only:
 
 ---
 
+#### `get_object`
+
+Get detailed information about a specific object by its ID.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "g123456789"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | The unique object identifier |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "g123456789",
+  "object_type": "TEXT_BOX",
+  "slide_index": 1,
+  "position": {"x": 100, "y": 50},
+  "size": {"width": 300, "height": 100},
+  "shape": {
+    "shape_type": "TEXT_BOX",
+    "text": "Hello World",
+    "text_style": {
+      "font_family": "Arial",
+      "font_size": 24,
+      "bold": true,
+      "color": "#FF0000",
+      "link_url": "https://example.com"
+    },
+    "fill": {
+      "type": "SOLID",
+      "solid_color": "#007FFF"
+    },
+    "outline": {
+      "color": "#000000",
+      "weight": 2,
+      "dash_style": "SOLID"
+    },
+    "placeholder_type": "TITLE"
+  }
+}
+```
+
+**Type-Specific Output Fields:**
+
+The output includes a type-specific field based on `object_type`:
+
+| Object Type | Field | Description |
+|-------------|-------|-------------|
+| TEXT_BOX, RECTANGLE, etc. | `shape` | Shape properties including text, style, fill, outline |
+| IMAGE | `image` | Image properties including URLs, crop, brightness, contrast |
+| TABLE | `table` | Table structure with rows, columns, and cell contents |
+| VIDEO | `video` | Video properties including ID, source, timing, autoplay |
+| LINE | `line` | Line properties including type, arrows, color, weight |
+| GROUP | `group` | Group with child count and child IDs |
+| SHEETS_CHART | `chart` | Sheets chart with spreadsheet ID and chart ID |
+| WORD_ART | `word_art` | Word art with rendered text |
+
+**Shape Details (`shape` field):**
+```json
+{
+  "shape_type": "TEXT_BOX",
+  "text": "Content text",
+  "text_style": {
+    "font_family": "Arial",
+    "font_size": 24,
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "color": "#FF0000",
+    "link_url": "https://..."
+  },
+  "fill": {
+    "type": "SOLID",
+    "solid_color": "#FFFFFF"
+  },
+  "outline": {
+    "color": "#000000",
+    "weight": 1,
+    "dash_style": "SOLID"
+  },
+  "placeholder_type": "TITLE"
+}
+```
+
+**Image Details (`image` field):**
+```json
+{
+  "content_url": "https://...",
+  "source_url": "https://...",
+  "brightness": 0.5,
+  "contrast": 0.3,
+  "transparency": 0.1,
+  "recolor": "GRAYSCALE",
+  "crop": {
+    "top": 0.1,
+    "bottom": 0.2,
+    "left": 0.05,
+    "right": 0.15
+  }
+}
+```
+
+**Table Details (`table` field):**
+```json
+{
+  "rows": 3,
+  "columns": 4,
+  "cells": [
+    [
+      {"row": 0, "column": 0, "text": "Header 1", "row_span": 1, "column_span": 1, "background": "#E5E5E5"},
+      {"row": 0, "column": 1, "text": "Header 2"}
+    ],
+    [
+      {"row": 1, "column": 0, "text": "Cell A1"},
+      {"row": 1, "column": 1, "text": "Cell B1"}
+    ]
+  ]
+}
+```
+
+**Video Details (`video` field):**
+```json
+{
+  "video_id": "dQw4w9WgXcQ",
+  "source": "YOUTUBE",
+  "url": "https://www.youtube.com/watch?v=...",
+  "start_time": 30,
+  "end_time": 60,
+  "autoplay": true,
+  "mute": false
+}
+```
+
+**Line Details (`line` field):**
+```json
+{
+  "line_type": "STRAIGHT_CONNECTOR_1",
+  "start_arrow": "ARROW",
+  "end_arrow": "NONE",
+  "color": "#0000FF",
+  "weight": 3,
+  "dash_style": "DASH"
+}
+```
+
+**Group Details (`group` field):**
+```json
+{
+  "child_count": 3,
+  "child_ids": ["child-1", "child-2", "child-3"]
+}
+```
+
+**Features:**
+- Returns complete object properties based on type
+- Finds objects anywhere in the presentation (including nested in groups)
+- Position and size in points (standard slide: 720x405 points)
+- Colors returned as hex strings (#RRGGBB) or theme references (theme:ACCENT1)
+- Video times in seconds (converted from internal milliseconds)
+- Text style includes font, size, bold/italic, color, and hyperlinks
+
+**Use Cases:**
+- Inspect object properties before modification
+- Get exact styling for duplication
+- Extract text content and formatting
+- Retrieve image URLs and adjustments
+- Check video timing and playback settings
+- Navigate group contents via child IDs
+
+**Examples:**
+
+Get a shape's details:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz"
+}
+```
+
+Get an image's properties:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "image-123"
+}
+```
+
+**Errors:**
+- `object not found: object 'xyz' not found in presentation` - Object ID not found
+- `object not found: object_id is required` - Empty object ID
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to access
+- `slides API error` - API error occurred
+
+---
+
 *More tools to be documented:*
 
 ### Content Manipulation
