@@ -1679,6 +1679,99 @@ for _, slideResult := range output.Results {
 }
 ```
 
+### replace_text Tool (`replace_text.go`)
+Finds and replaces text across a presentation.
+
+**Input:**
+```go
+tools.ReplaceTextInput{
+    PresentationID: "presentation-id",  // Required
+    Find:           "old text",         // Required - text to find
+    ReplaceWith:    "new text",         // Required - replacement text (empty string to delete)
+    CaseSensitive:  false,              // Optional, default false
+    Scope:          "all",              // Optional: "all" | "slide" | "object" - default "all"
+    SlideID:        "slide-id",         // Required when scope is "slide"
+    ObjectID:       "object-id",        // Required when scope is "object"
+}
+```
+
+**Output:**
+```go
+tools.ReplaceTextOutput{
+    PresentationID:   "presentation-id",
+    Find:             "old text",
+    ReplaceWith:      "new text",
+    CaseSensitive:    false,
+    Scope:            "all",
+    ReplacementCount: 5,                    // Number of replacements made
+    AffectedObjects:  []AffectedObject{...}, // List of objects that were modified
+}
+
+// Each affected object contains:
+tools.AffectedObject{
+    SlideIndex: 1,           // 1-based slide index
+    SlideID:    "slide-id",
+    ObjectID:   "shape-id",
+    ObjectType: "TEXT_BOX",
+}
+```
+
+**Features:**
+- Uses Google Slides `ReplaceAllTextRequest` API for efficient bulk replacement
+- Scope `all` replaces across entire presentation
+- Scope `slide` limits to a specific slide (requires `slide_id`)
+- Scope `object` limits to slide containing object (requires `object_id`)
+- Case-insensitive by default (configurable)
+- Reports affected objects with slide and type information
+- Empty `replace_with` effectively deletes matched text
+
+**Sentinel Errors:**
+```go
+tools.ErrReplaceTextFailed     // Generic replacement failure
+tools.ErrInvalidFind           // Find text is empty
+tools.ErrInvalidScope          // Invalid scope or missing scope-specific parameter
+tools.ErrSlideNotFound         // Slide ID not found (when scope is "slide")
+tools.ErrObjectNotFound        // Object ID not found (when scope is "object")
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Replace all occurrences in entire presentation
+output, err := tools.ReplaceText(ctx, tokenSource, tools.ReplaceTextInput{
+    PresentationID: "abc123",
+    Find:           "{{name}}",
+    ReplaceWith:    "John Doe",
+})
+
+// Case-sensitive replacement on specific slide
+output, err := tools.ReplaceText(ctx, tokenSource, tools.ReplaceTextInput{
+    PresentationID: "abc123",
+    Find:           "OLD",
+    ReplaceWith:    "NEW",
+    CaseSensitive:  true,
+    Scope:          "slide",
+    SlideID:        "slide-xyz",
+})
+
+// Delete text (replace with empty string)
+output, err := tools.ReplaceText(ctx, tokenSource, tools.ReplaceTextInput{
+    PresentationID: "abc123",
+    Find:           "[DRAFT]",
+    ReplaceWith:    "",
+})
+
+// Process results
+fmt.Printf("Replaced %d occurrences in %d objects\n",
+    output.ReplacementCount, len(output.AffectedObjects))
+for _, obj := range output.AffectedObjects {
+    fmt.Printf("  Slide %d: %s (%s)\n", obj.SlideIndex, obj.ObjectID, obj.ObjectType)
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

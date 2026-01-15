@@ -1871,11 +1871,135 @@ Case-sensitive search:
 
 ---
 
+#### `replace_text`
+
+Find and replace text across a presentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "find": "{{name}}",
+  "replace_with": "John Doe",
+  "case_sensitive": false,
+  "scope": "all"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `find` | string | Yes | Text to search for |
+| `replace_with` | string | Yes | Replacement text (empty string to delete matches) |
+| `case_sensitive` | boolean | No | Enable case-sensitive matching (default: false) |
+| `scope` | string | No | Scope of replacement: "all", "slide", "object" (default: "all") |
+| `slide_id` | string | Conditional | Required when scope is "slide" |
+| `object_id` | string | Conditional | Required when scope is "object" |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "find": "{{name}}",
+  "replace_with": "John Doe",
+  "case_sensitive": false,
+  "scope": "all",
+  "replacement_count": 5,
+  "affected_objects": [
+    {
+      "slide_index": 1,
+      "slide_id": "g123456",
+      "object_id": "shape-789",
+      "object_type": "TEXT_BOX"
+    },
+    {
+      "slide_index": 2,
+      "slide_id": "g456789",
+      "object_id": "table-1",
+      "object_type": "TABLE"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `presentation_id` | string | The modified presentation ID |
+| `find` | string | The search term used |
+| `replace_with` | string | The replacement text |
+| `case_sensitive` | boolean | Whether matching was case-sensitive |
+| `scope` | string | The scope used for replacement |
+| `replacement_count` | integer | Total number of replacements made |
+| `affected_objects` | array | Objects that contained matches |
+| `affected_objects[].slide_index` | integer | 1-based slide index |
+| `affected_objects[].slide_id` | string | Object ID of the containing slide |
+| `affected_objects[].object_id` | string | Object ID of the modified element |
+| `affected_objects[].object_type` | string | Type of modified object (TEXT_BOX, TABLE, etc.) |
+
+**Features:**
+- Uses Google Slides `ReplaceAllTextRequest` API for efficient bulk replacement
+- Scope `all` replaces across entire presentation (default)
+- Scope `slide` limits to a specific slide
+- Scope `object` limits to the slide containing a specific object
+- Case-insensitive by default (configurable)
+- Empty `replace_with` effectively deletes all matches
+- Reports all affected objects for verification
+
+**Use Cases:**
+- Template mail merge (replacing placeholders like {{name}})
+- Bulk text updates across presentation
+- Removing draft watermarks or placeholder text
+- Correcting typos or outdated information
+- Updating company names or product names
+
+**Examples:**
+
+Replace template placeholders:
+```json
+{
+  "presentation_id": "abc123",
+  "find": "{{company_name}}",
+  "replace_with": "Acme Corporation"
+}
+```
+
+Case-sensitive replacement on specific slide:
+```json
+{
+  "presentation_id": "abc123",
+  "find": "Q3",
+  "replace_with": "Q4",
+  "case_sensitive": true,
+  "scope": "slide",
+  "slide_id": "g456789"
+}
+```
+
+Delete text (replace with empty):
+```json
+{
+  "presentation_id": "abc123",
+  "find": "[DRAFT]",
+  "replace_with": ""
+}
+```
+
+**Errors:**
+- `find text is required: find text cannot be empty` - Empty find text
+- `invalid scope: scope must be 'all', 'slide', or 'object'` - Invalid scope value
+- `invalid scope: slide_id is required when scope is 'slide'` - Missing slide_id for slide scope
+- `invalid scope: object_id is required when scope is 'object'` - Missing object_id for object scope
+- `slide not found` - Specified slide_id doesn't exist
+- `object not found` - Specified object_id doesn't exist
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 *More tools to be documented:*
 
 ### Content Manipulation
 - `add_text` - Add text to existing placeholders
-- `replace_text` - Find and replace text
 - `style_text` - Apply text formatting
 - `format_paragraph` - Set paragraph styles
 
