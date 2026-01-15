@@ -790,6 +790,81 @@ output, err := tools.CreatePresentation(ctx, tokenSource, tools.CreatePresentati
 })
 ```
 
+### list_slides Tool (`list_slides.go`)
+Lists all slides in a presentation with metadata and summary statistics.
+
+**Input:**
+```go
+tools.ListSlidesInput{
+    PresentationID:    "presentation-id",  // Required
+    IncludeThumbnails: true,               // Optional, default false
+}
+```
+
+**Output:**
+```go
+tools.ListSlidesOutput{
+    PresentationID: "presentation-id",
+    Title:          "Presentation Title",
+    Slides:         []SlideListItem{...},
+    Statistics:     SlidesStatistics{...},
+}
+
+// Each slide item contains:
+tools.SlideListItem{
+    Index:           1,                    // 1-based index
+    SlideID:         "slide-object-id",
+    Title:           "Slide Title",        // From TITLE placeholder
+    LayoutType:      "TITLE_AND_BODY",     // Layout name
+    ObjectCount:     5,                    // Number of page elements
+    ThumbnailBase64: "...",               // Optional base64 thumbnail
+}
+
+// Statistics:
+tools.SlidesStatistics{
+    TotalSlides:      10,
+    SlidesWithNotes:  5,
+    SlidesWithVideos: 2,
+}
+```
+
+**Features:**
+- Returns 1-based slide indices for easy human reference
+- Extracts slide title from TITLE or CENTERED_TITLE placeholders
+- Detects layout type from presentation layouts
+- Counts slides with speaker notes
+- Counts slides containing video elements (including in groups)
+- Optional thumbnail support via base64 encoding
+
+**Sentinel Errors:**
+```go
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // 404 - presentation does not exist
+tools.ErrAccessDenied          // 403 - no permission to access
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// List slides without thumbnails
+output, err := tools.ListSlides(ctx, tokenSource, tools.ListSlidesInput{
+    PresentationID: "abc123",
+})
+
+// List slides with thumbnails
+output, err := tools.ListSlides(ctx, tokenSource, tools.ListSlidesInput{
+    PresentationID:    "abc123",
+    IncludeThumbnails: true,
+})
+
+// Check statistics
+fmt.Printf("Total: %d, With Notes: %d, With Videos: %d\n",
+    output.Statistics.TotalSlides,
+    output.Statistics.SlidesWithNotes,
+    output.Statistics.SlidesWithVideos,
+)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

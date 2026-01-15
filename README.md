@@ -594,10 +594,95 @@ Create a new empty Google Slides presentation.
 
 ---
 
+### Slide Operations
+
+#### `list_slides`
+
+List all slides in a presentation with metadata and summary statistics.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "include_thumbnails": false
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `include_thumbnails` | boolean | No | Include base64-encoded slide thumbnails (default: false) |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "title": "My Presentation",
+  "slides": [
+    {
+      "index": 1,
+      "slide_id": "slide-object-id-1",
+      "title": "Introduction",
+      "layout_type": "TITLE",
+      "object_count": 3,
+      "thumbnail_base64": "..."
+    },
+    {
+      "index": 2,
+      "slide_id": "slide-object-id-2",
+      "title": "Overview",
+      "layout_type": "TITLE_AND_BODY",
+      "object_count": 5,
+      "thumbnail_base64": "..."
+    }
+  ],
+  "statistics": {
+    "total_slides": 10,
+    "slides_with_notes": 5,
+    "slides_with_videos": 2
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `presentation_id` | string | The presentation ID |
+| `title` | string | Presentation title |
+| `slides` | array | Array of slide metadata |
+| `slides[].index` | integer | 1-based slide position |
+| `slides[].slide_id` | string | Unique slide object ID |
+| `slides[].title` | string | Slide title (from TITLE placeholder) |
+| `slides[].layout_type` | string | Layout type (e.g., TITLE, TITLE_AND_BODY, BLANK) |
+| `slides[].object_count` | integer | Number of page elements on the slide |
+| `slides[].thumbnail_base64` | string | Base64 thumbnail (only if requested) |
+| `statistics.total_slides` | integer | Total number of slides |
+| `statistics.slides_with_notes` | integer | Count of slides with speaker notes |
+| `statistics.slides_with_videos` | integer | Count of slides containing videos |
+
+**Features:**
+- Returns 1-based slide indices for easy human reference
+- Extracts slide title from TITLE or CENTERED_TITLE placeholders
+- Detects layout type from presentation layouts
+- Counts slides with speaker notes (non-empty notes page)
+- Counts slides containing video elements (including nested in groups)
+- Optional thumbnail support via base64 encoding
+
+**Use Cases:**
+- Getting a quick overview of presentation structure
+- Navigating large presentations by title
+- Finding slides with specific characteristics (notes, videos)
+- Generating table of contents or slide indexes
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to access
+
+---
+
 *More tools to be documented:*
 
-### Slide Operations
-- `list_slides` - List all slides
+### Additional Slide Operations
 - `describe_slide` - Get detailed slide description
 - `add_slide` - Add new slides
 - `delete_slide` - Remove slides
