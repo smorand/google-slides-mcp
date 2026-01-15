@@ -898,10 +898,89 @@ Insert a slide as the second slide:
 
 ---
 
+#### `delete_slide`
+
+Delete a slide from a presentation by index or ID.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 2
+}
+```
+
+Or by slide ID:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_id": "g123456789"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No* | 1-based index of slide to delete |
+| `slide_id` | string | No* | Object ID of slide to delete |
+
+*Either `slide_index` or `slide_id` is required. If both are provided, `slide_id` takes precedence.
+
+**Output:**
+```json
+{
+  "deleted_slide_id": "g123456789",
+  "remaining_slide_count": 2
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deleted_slide_id` | string | Object ID of the deleted slide |
+| `remaining_slide_count` | integer | Number of slides remaining after deletion |
+
+**Features:**
+- Delete by 1-based index or by slide object ID
+- Prevents deletion of the last remaining slide
+- Returns confirmation with updated slide count
+
+**Use Cases:**
+- Removing unwanted slides from presentations
+- Cleaning up template slides after population
+- Programmatic presentation management
+
+**Examples:**
+
+Delete the second slide:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 2
+}
+```
+
+Delete by slide ID:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_id": "g987654321"
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid slide reference: either slide_index or slide_id is required` - No slide specified
+- `cannot delete the last remaining slide: presentation must have at least one slide` - Last slide protection
+- `slide not found: slide with ID 'X' not found` - Slide ID doesn't exist
+- `slide not found: slide index X out of range (1-N)` - Index out of bounds
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 *More tools to be documented:*
 
 ### Additional Slide Operations
-- `delete_slide` - Remove slides
 - `reorder_slides` - Change slide order
 - `duplicate_slide` - Clone slides
 

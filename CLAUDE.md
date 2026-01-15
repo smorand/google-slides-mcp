@@ -1016,6 +1016,61 @@ output, err := tools.AddSlide(ctx, tokenSource, tools.AddSlideInput{
 fmt.Printf("New slide: index=%d, id=%s\n", output.SlideIndex, output.SlideID)
 ```
 
+### delete_slide Tool (`delete_slide.go`)
+Deletes a slide from a presentation.
+
+**Input:**
+```go
+tools.DeleteSlideInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     2,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+}
+```
+
+**Output:**
+```go
+tools.DeleteSlideOutput{
+    DeletedSlideID:     "slide-object-id",  // Object ID of the deleted slide
+    RemainingSlideCount: 2,                  // Number of slides after deletion
+}
+```
+
+**Features:**
+- Accepts either 1-based slide index OR slide ID for identification
+- If both provided, SlideID takes precedence
+- Prevents deletion of last remaining slide (returns ErrLastSlideDelete)
+- Returns updated slide count after deletion
+
+**Sentinel Errors:**
+```go
+tools.ErrDeleteSlideFailed      // Generic deletion failure
+tools.ErrLastSlideDelete        // Cannot delete the last remaining slide
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Delete slide by index
+output, err := tools.DeleteSlide(ctx, tokenSource, tools.DeleteSlideInput{
+    PresentationID: "abc123",
+    SlideIndex:     2,  // Delete second slide
+})
+
+// Delete slide by ID
+output, err := tools.DeleteSlide(ctx, tokenSource, tools.DeleteSlideInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+})
+
+fmt.Printf("Deleted: %s, Remaining: %d\n", output.DeletedSlideID, output.RemainingSlideCount)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
