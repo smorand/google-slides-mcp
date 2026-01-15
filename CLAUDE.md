@@ -865,6 +865,87 @@ fmt.Printf("Total: %d, With Notes: %d, With Videos: %d\n",
 )
 ```
 
+### describe_slide Tool (`describe_slide.go`)
+Gets detailed human-readable description of a specific slide.
+
+**Input:**
+```go
+tools.DescribeSlideInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+}
+```
+
+**Output:**
+```go
+tools.DescribeSlideOutput{
+    PresentationID:    "presentation-id",
+    SlideID:           "slide-object-id",
+    SlideIndex:        1,
+    Title:             "Slide Title",
+    LayoutType:        "TITLE_AND_BODY",
+    PageSize:          &PageSize{...},
+    Objects:           []ObjectDescription{...},
+    LayoutDescription: "Title at top: \"My Title\". 2 element(s) in center...",
+    ScreenshotBase64:  "base64-encoded-png",
+    SpeakerNotes:      "Notes for this slide",
+}
+
+// Each object description contains:
+tools.ObjectDescription{
+    ObjectID:       "shape-123",
+    ObjectType:     "TEXT_BOX",
+    Position:       &Position{X: 100, Y: 50},    // In points
+    Size:           &Size{Width: 300, Height: 100}, // In points
+    ContentSummary: "First 100 characters of text...",
+    ZOrder:         0,                            // Lower = further back
+    Children:       []ObjectDescription{...},    // For groups
+}
+```
+
+**Features:**
+- Accepts either 1-based slide index OR slide ID for flexibility
+- Returns position and size in points (converted from EMU)
+- Content summary truncated to 100 characters for readability
+- Generates human-readable layout description (e.g., "title at top center, image on left")
+- Includes slide screenshot as base64 PNG
+- Recursively describes grouped elements with children array
+
+**Sentinel Errors:**
+```go
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to access
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Describe slide by index
+output, err := tools.DescribeSlide(ctx, tokenSource, tools.DescribeSlideInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+})
+
+// Describe slide by ID
+output, err := tools.DescribeSlide(ctx, tokenSource, tools.DescribeSlideInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+})
+
+// Use the layout description for LLM context
+fmt.Println(output.LayoutDescription)
+// Output: "Title at top: \"Introduction\". 2 element(s) in center. Contains: 1 image, 1 text_box"
+```
+
+**Unit Conversion:**
+- Positions are stored internally in EMU (English Metric Units)
+- 1 point = 12700 EMU
+- Standard slide size: 720 x 405 points
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

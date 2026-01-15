@@ -680,10 +680,140 @@ List all slides in a presentation with metadata and summary statistics.
 
 ---
 
+#### `describe_slide`
+
+Get a detailed human-readable description of a specific slide, including all objects with their positions and content summaries.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 1
+}
+```
+
+Or using slide ID:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_id": "g1234567890"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | One of these | 1-based slide index |
+| `slide_id` | string | required | Unique slide object ID |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_id": "g1234567890",
+  "slide_index": 1,
+  "title": "Introduction",
+  "layout_type": "TITLE_AND_BODY",
+  "page_size": {
+    "width": {"magnitude": 720, "unit": "PT"},
+    "height": {"magnitude": 405, "unit": "PT"}
+  },
+  "objects": [
+    {
+      "object_id": "title-shape-1",
+      "object_type": "TEXT_BOX",
+      "position": {"x": 60.0, "y": 30.0},
+      "size": {"width": 600.0, "height": 50.0},
+      "content_summary": "Introduction to the Project",
+      "z_order": 0
+    },
+    {
+      "object_id": "image-1",
+      "object_type": "IMAGE",
+      "position": {"x": 50.0, "y": 100.0},
+      "size": {"width": 300.0, "height": 200.0},
+      "content_summary": "Image (external)",
+      "z_order": 1
+    },
+    {
+      "object_id": "group-1",
+      "object_type": "GROUP",
+      "position": {"x": 400.0, "y": 100.0},
+      "size": {"width": 200.0, "height": 150.0},
+      "content_summary": "Group (3 items)",
+      "z_order": 2,
+      "children": [
+        {
+          "object_id": "shape-in-group",
+          "object_type": "RECTANGLE",
+          "content_summary": "",
+          "z_order": 0
+        }
+      ]
+    }
+  ],
+  "layout_description": "Title at top: \"Introduction\". 2 element(s) in center. Contains: 1 group, 1 image, 1 text_box",
+  "screenshot_base64": "iVBORw0KGgoAAAANSUhEUgAA...",
+  "speaker_notes": "Remember to emphasize the key points here"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `presentation_id` | string | The presentation ID |
+| `slide_id` | string | Unique slide object ID |
+| `slide_index` | integer | 1-based slide position |
+| `title` | string | Slide title (from TITLE placeholder) |
+| `layout_type` | string | Layout type (e.g., TITLE, TITLE_AND_BODY) |
+| `page_size` | object | Slide dimensions |
+| `objects` | array | Array of object descriptions |
+| `objects[].object_id` | string | Unique object identifier |
+| `objects[].object_type` | string | Type of object (TEXT_BOX, IMAGE, etc.) |
+| `objects[].position` | object | X, Y position in points |
+| `objects[].size` | object | Width, height in points |
+| `objects[].content_summary` | string | Content summary (max 100 chars) |
+| `objects[].z_order` | integer | Stacking order (0 = back) |
+| `objects[].children` | array | Child objects (for groups) |
+| `layout_description` | string | Human-readable layout description |
+| `screenshot_base64` | string | Base64 PNG screenshot of the slide |
+| `speaker_notes` | string | Speaker notes content |
+
+**Features:**
+- Accepts either slide index (1-based) OR slide ID for flexibility
+- Returns position and size in points (converted from EMU)
+- Generates human-readable layout description for AI context
+- Includes screenshot for visual reference
+- Recursively describes grouped elements
+- Content summaries truncated to 100 characters
+
+**Content Summary Types:**
+- Text shapes: First 100 characters of text content
+- Placeholders: `[TITLE placeholder]`, `[BODY placeholder]`
+- Images: `Image` or `Image (external)`
+- Videos: `YouTube video: <id>` or `Video: <id>`
+- Tables: `Table (3x4)` (rows x columns)
+- Lines: Line type (e.g., `STRAIGHT_LINE`)
+- Groups: `Group (N items)`
+
+**Use Cases:**
+- Providing AI assistants with detailed slide context
+- Understanding object layout and positioning
+- Planning modifications to existing slides
+- Accessibility: describing slide content textually
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `either slide_index or slide_id must be provided` - No slide reference
+- `slide not found: slide index N out of range` - Invalid slide index
+- `slide not found: slide_id 'xxx' not found` - Invalid slide ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to access
+
+---
+
 *More tools to be documented:*
 
 ### Additional Slide Operations
-- `describe_slide` - Get detailed slide description
 - `add_slide` - Add new slides
 - `delete_slide` - Remove slides
 - `reorder_slides` - Change slide order
