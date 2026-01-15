@@ -235,6 +235,24 @@ API keys are stored in Firestore with the following structure:
 - Token caching with TTL reduces Firestore reads
 - Last-used timestamp tracking for key activity monitoring
 
+### Permission Verification
+
+Before modifying any presentation, the server verifies that the user has appropriate permissions:
+
+- **Write operations**: Requires `writer` or `owner` role
+- **Read operations**: Requires at least `viewer` or `commenter` role
+
+Permission checks use the Google Drive API to verify file capabilities:
+- Results are cached with a 5-minute TTL for performance
+- Clear error messages are returned when permissions are insufficient
+
+Example error response for insufficient permissions:
+```json
+{
+  "error": "user does not have write permission on this presentation"
+}
+```
+
 ## Available MCP Tools
 
 The server provides comprehensive tools for Google Slides manipulation:

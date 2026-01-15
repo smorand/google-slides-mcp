@@ -343,6 +343,94 @@ apiKeyMiddleware.ClearCache()
 size := apiKeyMiddleware.CacheSize()
 ```
 
+## Permissions Package
+
+The `internal/permissions/` package verifies user permissions before modifying presentations:
+
+### Permission Checker (`checker.go`)
+- Calls Drive API to check file permissions via `file.capabilities.canEdit`
+- Returns clear error messages when user lacks permission
+- Caches permission checks with configurable TTL (default 5 minutes)
+- Interface-based design for easy testing with `DriveService` interface
+
+### Permission Levels
+```go
+permissions.PermissionNone   // No access
+permissions.PermissionRead   // Read-only (viewer, commenter)
+permissions.PermissionWrite  // Write access (writer, owner)
+```
+
+### Sentinel Errors
+```go
+permissions.ErrNoWritePermission  // "user does not have write permission on this presentation"
+permissions.ErrNoReadPermission   // "user does not have read permission on this presentation"
+permissions.ErrPermissionCheck    // "failed to check permissions"
+permissions.ErrFileNotFound       // "presentation not found"
+```
+
+### Usage Pattern
+```go
+// Create checker
+checker := permissions.NewChecker(permissions.DefaultCheckerConfig(), nil)
+
+// Get token source from middleware context
+tokenSource := middleware.GetTokenSource(ctx)
+userEmail := middleware.GetUserEmail(ctx)
+
+// Check write permission before modifications
+if err := checker.CheckWrite(ctx, tokenSource, userEmail, presentationID); err != nil {
+    if errors.Is(err, permissions.ErrNoWritePermission) {
+        // Return 403 Forbidden with clear error message
+    }
+    // Handle other errors
+}
+
+// Read operations only need read permission
+if err := checker.CheckRead(ctx, tokenSource, userEmail, presentationID); err != nil {
+    // Handle permission error
+}
+```
+
+### Configuration
+```go
+permissions.CheckerConfig{
+    CacheTTL: 5 * time.Minute,    // Permission cache TTL
+    Logger:   slog.Default(),     // Logger instance
+}
+```
+
+### Cache Management
+```go
+// Invalidate cache for user/file combination
+checker.InvalidateCache(userEmail, presentationID)
+
+// Invalidate all cached permissions for a file
+checker.InvalidateCacheForFile(presentationID)
+
+// Clear entire cache
+checker.ClearCache()
+
+// Check cache size
+size := checker.CacheSize()
+```
+
+### Integration with Tools
+Tools that modify presentations should check write permission:
+```go
+func (t *Tools) ModifySlide(ctx context.Context, input ModifySlideInput) (*ModifySlideOutput, error) {
+    tokenSource := middleware.GetTokenSource(ctx)
+    userEmail := middleware.GetUserEmail(ctx)
+
+    // Check write permission before modification
+    if err := t.permissionChecker.CheckWrite(ctx, tokenSource, userEmail, input.PresentationID); err != nil {
+        return nil, err
+    }
+
+    // Proceed with modification
+    // ...
+}
+```
+
 ## Testing Locally
 
 1. Set up OAuth2 credentials in Secret Manager
