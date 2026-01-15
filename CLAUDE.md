@@ -114,6 +114,47 @@ Terraform manages GCP infrastructure:
 3. **In-memory cache**: LRU cache for access tokens and permissions
 4. **Rate limiting**: Token bucket algorithm for fairness
 
+## Transport Layer
+
+The `internal/transport/` package provides:
+
+### Server (`server.go`)
+- HTTP server with configurable port, timeouts, and shutdown
+- CORS middleware with configurable allowed origins
+- Request logging middleware
+- Graceful shutdown on context cancellation
+
+### MCP Handler (`mcp_handler.go`)
+- JSON-RPC 2.0 protocol implementation
+- MCP initialize handshake with protocol version negotiation
+- Tools list and call endpoints
+- Chunked transfer encoding for streaming responses
+
+### Key Types
+```go
+// Server configuration
+transport.ServerConfig{
+    Port:            8080,
+    ReadTimeout:     30 * time.Second,
+    WriteTimeout:    60 * time.Second,
+    AllowedOrigins:  []string{"*"},
+    Logger:          slog.Default(),
+}
+
+// JSON-RPC request/response
+transport.JSONRPCRequest{
+    JSONRPC: "2.0",
+    ID:      1,
+    Method:  "tools/call",
+    Params:  json.RawMessage(`{...}`),
+}
+```
+
+### Endpoints
+- `GET /health` - Health check, returns `{"status": "healthy"}`
+- `POST /mcp/initialize` - MCP handshake
+- `POST /mcp` - Tool calls (tools/list, tools/call)
+
 ## Testing Locally
 
 1. Set up OAuth2 credentials in Secret Manager

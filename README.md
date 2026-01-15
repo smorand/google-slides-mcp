@@ -16,10 +16,44 @@ This MCP server enables AI assistants to:
 ## Architecture
 
 The server is designed to run on Google Cloud Run and uses:
-- **HTTP Streamable Transport**: JSON-RPC over HTTP with chunked transfer encoding
+- **HTTP Streamable Transport**: JSON-RPC 2.0 over HTTP with chunked transfer encoding
 - **OAuth2 Authentication**: User authorization via Google OAuth2
 - **API Key Management**: Generated API keys stored in Firestore
 - **Secret Manager**: Secure storage of OAuth2 credentials
+
+### Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check endpoint |
+| `/mcp/initialize` | POST | MCP protocol handshake |
+| `/mcp` | POST | MCP tool calls |
+| `/auth` | GET | Initiate OAuth2 flow |
+| `/auth/callback` | GET | OAuth2 callback |
+
+### MCP Protocol
+
+The server implements the MCP (Model Context Protocol) specification:
+- Protocol version: `2024-11-05`
+- Transport: HTTP with chunked transfer encoding
+- Format: JSON-RPC 2.0
+
+Example initialize request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "my-client",
+      "version": "1.0.0"
+    }
+  }
+}
+```
 
 ## Project Structure
 
