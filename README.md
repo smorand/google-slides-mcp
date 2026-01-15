@@ -106,6 +106,28 @@ make fmt
 make check
 ```
 
+### Docker
+
+```bash
+# Build the Docker image
+docker build -t google-slides-mcp .
+
+# Run locally with Docker
+docker run -p 8080:8080 google-slides-mcp
+
+# Build with version information
+docker build \
+  --build-arg VERSION=1.0.0 \
+  --build-arg COMMIT_SHA=$(git rev-parse HEAD) \
+  --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  -t google-slides-mcp .
+```
+
+The Docker image uses:
+- Multi-stage build for minimal image size
+- Distroless base image for security
+- Non-root user execution (UID 65532)
+
 ### Deployment
 
 The server is designed to be deployed on Google Cloud Run. Infrastructure is managed with Terraform.

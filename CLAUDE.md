@@ -15,6 +15,10 @@ make vet      # Run go vet
 make check    # Run all checks (fmt, vet, lint, test)
 make clean    # Remove build artifacts
 
+# Docker commands
+docker build -t google-slides-mcp .              # Build container image
+docker run -p 8080:8080 google-slides-mcp        # Run container locally
+
 # Terraform commands
 make plan     # Plan infrastructure changes
 make deploy   # Deploy infrastructure
@@ -235,3 +239,48 @@ Follow the feature-based pattern:
 3. Use `local.resource_prefix` for naming
 4. Apply `local.common_labels` for tracking
 5. Run `terraform validate` before committing
+
+## Docker
+
+### Dockerfile Architecture
+
+Multi-stage build for minimal image size and security:
+
+1. **Builder stage** (`golang:1.21-alpine`):
+   - Installs ca-certificates and git for module downloads
+   - Copies and downloads Go dependencies
+   - Builds static binary with CGO_ENABLED=0
+   - Supports build args: VERSION, COMMIT_SHA, BUILD_TIME
+
+2. **Runtime stage** (`gcr.io/distroless/static-debian12:nonroot`):
+   - Distroless image for minimal attack surface
+   - Runs as non-root user (UID 65532)
+   - Contains only the binary and CA certificates
+
+### Build Arguments
+
+```bash
+docker build \
+  --build-arg VERSION=1.0.0 \
+  --build-arg COMMIT_SHA=$(git rev-parse HEAD) \
+  --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  -t google-slides-mcp .
+```
+
+### Cloud Build
+
+`cloudbuild.yaml` defines the CI/CD pipeline:
+
+1. **test**: Run `go test -race` with coverage
+2. **build**: Build Docker image with version tags
+3. **push**: Push to Artifact Registry
+4. **deploy**: Deploy to Cloud Run
+
+Substitutions:
+- `_REGION`: GCP region (default: europe-west1)
+- `_SERVICE_NAME`: Cloud Run service name (default: google-slides-mcp)
+
+Manual trigger:
+```bash
+gcloud builds submit --config=cloudbuild.yaml
+```
