@@ -695,6 +695,51 @@ output, err := tools.CopyPresentation(ctx, tokenSource, tools.CopyPresentationIn
 })
 ```
 
+### export_pdf Tool (`export_pdf.go`)
+Exports a Google Slides presentation to PDF format.
+
+**Input:**
+```go
+tools.ExportPDFInput{
+    PresentationID: "presentation-id",  // Required
+}
+```
+
+**Output:**
+```go
+tools.ExportPDFOutput{
+    PDFBase64: "base64-encoded-pdf-content",
+    PageCount: 10,      // Number of pages detected in PDF
+    FileSize:  123456,  // Size in bytes
+}
+```
+
+**Features:**
+- Uses Drive API's export functionality
+- Returns PDF as base64-encoded string for easy transfer
+- Detects page count using PDF structure analysis
+- Includes file size metadata
+
+**Sentinel Errors:**
+```go
+tools.ErrExportFailed          // Generic export failure
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to export
+tools.ErrDriveAPIError         // Drive API errors
+```
+
+**Usage Pattern:**
+```go
+// Export presentation to PDF
+output, err := tools.ExportPDF(ctx, tokenSource, tools.ExportPDFInput{
+    PresentationID: "abc123",
+})
+
+// Decode the PDF (example)
+pdfData, _ := base64.StdEncoding.DecodeString(output.PDFBase64)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
@@ -703,6 +748,7 @@ The tools package uses a `DriveService` interface for Drive API operations:
 type DriveService interface {
     ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
     CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
+    ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
 }
 
 // Factory pattern

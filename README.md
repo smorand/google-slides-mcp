@@ -485,9 +485,65 @@ Copy a Google Slides presentation to create a new one. Useful for creating prese
 
 ---
 
+#### `export_pdf`
+
+Export a Google Slides presentation to PDF format.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID to export |
+
+**Output:**
+```json
+{
+  "pdf_base64": "JVBERi0xLjQK...",
+  "page_count": 10,
+  "file_size": 123456
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pdf_base64` | string | Base64-encoded PDF content |
+| `page_count` | integer | Number of pages detected in PDF |
+| `file_size` | integer | PDF file size in bytes |
+
+**Features:**
+- Uses Google Drive API export functionality
+- Returns PDF as base64 for easy transfer via JSON
+- Detects page count using PDF structure analysis
+- Includes file size metadata
+
+**Use Cases:**
+- Generating printable versions of presentations
+- Creating archives of presentation content
+- Sharing presentations with non-Google users
+
+**Client-side PDF handling:**
+```javascript
+// Decode and save the PDF
+const pdfData = atob(response.pdf_base64);
+const blob = new Blob([pdfData], { type: 'application/pdf' });
+const url = URL.createObjectURL(blob);
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to export
+- `failed to export presentation` - Export operation failed
+
+---
+
 *More tools to be documented:*
 - `create_presentation` - Create new presentations
-- `export_pdf` - Export to PDF format
 
 ### Slide Operations
 - `list_slides` - List all slides

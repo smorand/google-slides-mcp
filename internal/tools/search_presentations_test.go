@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	"golang.org/x/oauth2"
@@ -12,8 +13,9 @@ import (
 
 // mockDriveService implements DriveService for testing.
 type mockDriveService struct {
-	ListFilesFunc func(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
-	CopyFileFunc  func(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
+	ListFilesFunc  func(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
+	CopyFileFunc   func(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
+	ExportFileFunc func(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
 }
 
 func (m *mockDriveService) ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error) {
@@ -26,6 +28,13 @@ func (m *mockDriveService) ListFiles(ctx context.Context, query string, pageSize
 func (m *mockDriveService) CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error) {
 	if m.CopyFileFunc != nil {
 		return m.CopyFileFunc(ctx, fileID, file)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockDriveService) ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error) {
+	if m.ExportFileFunc != nil {
+		return m.ExportFileFunc(ctx, fileID, mimeType)
 	}
 	return nil, errors.New("not implemented")
 }

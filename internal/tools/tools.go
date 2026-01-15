@@ -3,6 +3,7 @@ package tools
 
 import (
 	"context"
+	"io"
 	"log/slog"
 
 	"golang.org/x/oauth2"
@@ -54,6 +55,7 @@ func NewRealSlidesServiceFactory() SlidesServiceFactory {
 type DriveService interface {
 	ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
 	CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
+	ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
 }
 
 // DriveServiceFactory creates a Drive service from a token source.
@@ -86,6 +88,17 @@ func (s *realDriveService) CopyFile(ctx context.Context, fileID string, file *dr
 		SupportsAllDrives(true).
 		Context(ctx).
 		Do()
+}
+
+// ExportFile exports a Google Workspace file to the specified MIME type.
+func (s *realDriveService) ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error) {
+	resp, err := s.service.Files.Export(fileID, mimeType).
+		Context(ctx).
+		Download()
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
 }
 
 // NewRealDriveServiceFactory returns a factory that creates real Drive services.
