@@ -1220,3 +1220,32 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-15 - US-00037 - Implement tool to modify shape properties
+
+**Status:** Success
+
+**What was implemented:**
+- New `modify_shape` MCP tool to update shape appearance
+- Support for fill color (solid hex or transparent)
+- Support for outline properties (color, weight, dash style)
+- Support for toggling shadow visibility
+- Uses `UpdateShapePropertiesRequest` in BatchUpdate
+- Comprehensive test suite with 8 test cases
+
+**Files changed:**
+- `internal/tools/modify_shape.go` - Tool implementation
+- `internal/tools/modify_shape_test.go` - Comprehensive tests
+- `CLAUDE.md` - Added modify_shape documentation
+- `README.md` - Added modify_shape tool documentation
+- `stories.yaml` - Marked US-00037 as passes: true
+
+**Learnings:**
+- `UpdateShapePropertiesRequest` handles fill, outline, and shadow
+- Reflection is not supported on `ShapeProperties` in the Go Slides API client (v1), so it was omitted from implementation
+- Transparency is handled by setting `PropertyState` to "NOT_RENDERED"
+- Helper functions for pointers (`boolPtr`, `float64Ptr`) are useful for optional JSON fields but must be careful with package scope in tests
+
+**Remaining issues:** None
+
+---

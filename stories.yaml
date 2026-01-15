@@ -937,7 +937,7 @@
   - Shadow can be added/removed
   - Reflection can be added/removed
   - 'Command: go test ./internal/tools/... -run TestModifyShape passes'
-  passes: false
+  passes: true
 - id: US-00038
   title: Implement tool to move/resize object
   priority: 10

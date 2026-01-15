@@ -2765,6 +2765,84 @@ output, err := tools.CreateLine(ctx, tokenSource, tools.CreateLineInput{
 fmt.Printf("Created line: %s\n", output.ObjectID)
 ```
 
+### modify_shape Tool (`modify_shape.go`)
+Modifies shape appearance (fill, outline, shadow).
+
+**Input:**
+```go
+tools.ModifyShapeInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "shape-object-id",  // Required - ID of the shape to modify
+    Properties: &tools.ShapeProperties{
+        FillColor:     "#FF0000",       // Optional - hex color or "transparent"
+        OutlineColor:  "#0000FF",       // Optional - hex color or "transparent"
+        OutlineWeight: &weight,         // Optional - weight in points
+        OutlineDash:   "DASH",          // Optional - dash style
+        Shadow:        &true,           // Optional - enable/disable shadow
+    },
+}
+```
+
+**Output:**
+```go
+tools.ModifyShapeOutput{
+    ObjectID:          "shape-object-id",
+    UpdatedProperties: []string{"fill_color", "shadow"},  // List of updated properties
+}
+```
+
+**Features:**
+- Modify fill and outline colors (supports transparency)
+- Change outline weight and dash style
+- Toggle shadow visibility
+- Uses `UpdateShapePropertiesRequest` for batch updates
+
+**Sentinel Errors:**
+```go
+tools.ErrModifyShapeFailed      // Generic modification failure
+tools.ErrNoProperties           // No properties provided to update
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Change fill color
+output, err := tools.ModifyShape(ctx, tokenSource, tools.ModifyShapeInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Properties: &tools.ShapeProperties{
+        FillColor: "#00FF00",
+    },
+})
+
+// Make transparent with dashed outline
+weight := 2.0
+output, err := tools.ModifyShape(ctx, tokenSource, tools.ModifyShapeInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Properties: &tools.ShapeProperties{
+        FillColor:     "transparent",
+        OutlineColor:  "#000000",
+        OutlineWeight: &weight,
+        OutlineDash:   "DASH",
+    },
+})
+
+// Enable shadow
+shadow := true
+output, err := tools.ModifyShape(ctx, tokenSource, tools.ModifyShapeInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Properties: &tools.ShapeProperties{
+        Shadow: &shadow,
+    },
+})
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

@@ -3201,6 +3201,90 @@ Create a curved connector:
 - `failed to create line` - API error
 
 ---
+
+#### `modify_shape`
+
+Modify shape appearance (fill, outline, shadow).
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-123",
+  "properties": {
+    "fill_color": "#FF0000",
+    "outline_color": "#0000FF",
+    "outline_weight": 3,
+    "outline_dash": "DASH",
+    "shadow": true
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the shape to modify |
+| `properties` | object | Yes | Properties to update |
+| `properties.fill_color` | string | No | Hex color or "transparent" |
+| `properties.outline_color` | string | No | Hex color or "transparent" |
+| `properties.outline_weight` | number | No | Outline weight in points |
+| `properties.outline_dash` | string | No | Dash style (SOLID, DASH, DOT, etc.) |
+| `properties.shadow` | boolean | No | Enable (true) or disable (false) shadow |
+
+**Output:**
+```json
+{
+  "object_id": "shape-123",
+  "updated_properties": ["fill_color", "outline_color", "shadow"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The modified object's ID |
+| `updated_properties` | array | List of property names that were updated |
+
+**Features:**
+- Modify fill and outline colors with support for transparency
+- Change outline style (weight, dash)
+- Toggle shadow visibility
+- Updates are applied in a single batch request
+
+**Examples:**
+
+Change fill to green:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "properties": {
+    "fill_color": "#00FF00"
+  }
+}
+```
+
+Make transparent with dashed outline:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "properties": {
+    "fill_color": "transparent",
+    "outline_color": "#000000",
+    "outline_weight": 2,
+    "outline_dash": "DASH"
+  }
+}
+```
+
+**Errors:**
+- `no properties to update` - Properties object is empty or missing
+- `object not found` - Object ID not found
+- `access denied` - No permission to modify
+- `failed to modify shape` - API error
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 
