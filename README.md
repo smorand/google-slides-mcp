@@ -1996,6 +1996,103 @@ Set paragraph formatting options like alignment, spacing, and indentation.
 
 ---
 
+#### `create_bullet_list`
+
+Convert text to a bullet list or add bullets to existing text in a shape.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "bullet_style": "DISC",
+  "bullet_color": "#FF0000",
+  "paragraph_indices": [0, 2]
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the shape containing text |
+| `bullet_style` | string | Yes | Bullet style name or full preset name |
+| `bullet_color` | string | No | Hex color for bullets (e.g., `#FF0000`) |
+| `paragraph_indices` | array | No | 0-based indices of paragraphs to apply bullets to (all if omitted) |
+
+**Bullet Styles:**
+
+| User-Friendly Name | API Preset | Description |
+|--------------------|------------|-------------|
+| `DISC` | BULLET_DISC_CIRCLE_SQUARE | Filled circle bullets |
+| `CIRCLE` | BULLET_DISC_CIRCLE_SQUARE | Same as DISC |
+| `SQUARE` | BULLET_DISC_CIRCLE_SQUARE | Same as DISC |
+| `DIAMOND` | BULLET_DIAMOND_CIRCLE_SQUARE | Diamond bullets |
+| `ARROW` | BULLET_ARROW_DIAMOND_DISC | Arrow bullets |
+| `STAR` | BULLET_STAR_CIRCLE_SQUARE | Star bullets |
+| `CHECKBOX` | BULLET_CHECKBOX | Checkbox bullets |
+
+Full preset names are also accepted (e.g., `BULLET_DISC_CIRCLE_SQUARE`).
+
+**Output:**
+```json
+{
+  "object_id": "textbox_123",
+  "bullet_preset": "BULLET_DISC_CIRCLE_SQUARE",
+  "paragraph_scope": "ALL",
+  "bullet_color": "#FF0000"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | ID of the modified object |
+| `bullet_preset` | string | The actual API preset that was applied |
+| `paragraph_scope` | string | `"ALL"` or `"INDICES [0, 2]"` indicating which paragraphs received bullets |
+| `bullet_color` | string | The color applied (only present if color was specified) |
+
+**Example - Apply disc bullets to all paragraphs:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "bullet_style": "DISC"
+}
+```
+
+**Example - Apply colored star bullets:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "bullet_style": "STAR",
+  "bullet_color": "#FFD700"
+}
+```
+
+**Example - Apply checkbox bullets to specific paragraphs:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "bullet_style": "CHECKBOX",
+  "paragraph_indices": [0, 2, 4]
+}
+```
+
+**Errors:**
+- `invalid bullet_style: bullet_style is required` - Empty bullet style
+- `invalid bullet_style: 'XYZ' is not a valid bullet style` - Invalid style name
+- `invalid paragraph_index: paragraph indices cannot be negative` - Negative index
+- `invalid paragraph_index: paragraph index N is out of range (object has M paragraphs)` - Index too large
+- `object does not contain text` - Object type doesn't support bullets
+- `object does not contain editable text: tables must have bullets applied cell by cell` - Table object
+- `object not found: object 'xyz' not found in presentation` - Invalid object ID
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 #### `search_text`
 
 Search for text across all slides in a presentation.
@@ -2239,6 +2336,7 @@ Delete text (replace with empty):
 - `add_text` - Add text to existing placeholders
 - `style_text` - Apply text formatting
 - `format_paragraph` - Set paragraph styles
+- `create_bullet_list` - Convert text to bullet lists
 
 ### Media and Objects
 - `add_image` - Insert images

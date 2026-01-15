@@ -1805,6 +1805,91 @@ output, err := tools.FormatParagraph(ctx, tokenSource, tools.FormatParagraphInpu
 fmt.Printf("Applied: %v, Scope: %s\n", output.AppliedFormatting, output.ParagraphScope)
 ```
 
+### create_bullet_list Tool (`create_bullet_list.go`)
+Converts text to a bullet list or adds bullets to existing text.
+
+**Input:**
+```go
+tools.CreateBulletListInput{
+    PresentationID:   "presentation-id",  // Required
+    ObjectID:         "object-id",        // Required - ID of shape containing text
+    ParagraphIndices: []int{0, 2},        // Optional - apply to specific paragraphs (0-based), all if omitted
+    BulletStyle:      "DISC",             // Required - bullet style
+    BulletColor:      "#FF0000",          // Optional - hex color for bullets
+}
+```
+
+**Bullet Styles:**
+| User-Friendly Name | API Preset |
+|--------------------|------------|
+| `DISC` | BULLET_DISC_CIRCLE_SQUARE |
+| `CIRCLE` | BULLET_DISC_CIRCLE_SQUARE |
+| `SQUARE` | BULLET_DISC_CIRCLE_SQUARE |
+| `DIAMOND` | BULLET_DIAMOND_CIRCLE_SQUARE |
+| `ARROW` | BULLET_ARROW_DIAMOND_DISC |
+| `STAR` | BULLET_STAR_CIRCLE_SQUARE |
+| `CHECKBOX` | BULLET_CHECKBOX |
+
+Full preset names are also accepted (e.g., `BULLET_DISC_CIRCLE_SQUARE`).
+
+**Output:**
+```go
+tools.CreateBulletListOutput{
+    ObjectID:       "object-id",                  // The modified object's ID
+    BulletPreset:   "BULLET_DISC_CIRCLE_SQUARE",  // The actual preset applied
+    ParagraphScope: "ALL",                        // "ALL" or "INDICES [0, 2]"
+    BulletColor:    "#FF0000",                    // The color applied, if any
+}
+```
+
+**Features:**
+- Apply bullets to all paragraphs or specific paragraphs by index
+- Bullet style names are case-insensitive (normalized to uppercase)
+- Supports both user-friendly names (DISC, ARROW) and full API preset names
+- Bullet color is applied via UpdateTextStyleRequest (colors the bullet glyph)
+- Invalid colors are silently ignored (bullets still created without color)
+
+**Sentinel Errors:**
+```go
+tools.ErrCreateBulletListFailed // Generic bullet list creation failure
+tools.ErrInvalidBulletStyle     // Invalid or empty bullet style
+tools.ErrInvalidParagraphIndex  // Paragraph index negative or out of range
+tools.ErrNotTextObject          // Object does not contain text (tables must be done cell by cell)
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Apply bullets to all paragraphs with DISC style
+output, err := tools.CreateBulletList(ctx, tokenSource, tools.CreateBulletListInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    BulletStyle:    "DISC",
+})
+
+// Apply colored star bullets
+output, err := tools.CreateBulletList(ctx, tokenSource, tools.CreateBulletListInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    BulletStyle:    "STAR",
+    BulletColor:    "#FFD700",  // Gold color
+})
+
+// Apply bullets to specific paragraphs only
+output, err := tools.CreateBulletList(ctx, tokenSource, tools.CreateBulletListInput{
+    PresentationID:   "abc123",
+    ObjectID:         "shape-xyz",
+    ParagraphIndices: []int{0, 2, 4},  // First, third, and fifth paragraphs
+    BulletStyle:      "CHECKBOX",
+})
+
+fmt.Printf("Applied: %s, Scope: %s\n", output.BulletPreset, output.ParagraphScope)
+```
+
 ### search_text Tool (`search_text.go`)
 Searches for text across all slides in a presentation.
 
