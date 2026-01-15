@@ -811,10 +811,96 @@ Or using slide ID:
 
 ---
 
+#### `add_slide`
+
+Add a new slide to a presentation at a specified position.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "position": 2,
+  "layout": "TITLE_AND_BODY"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `position` | integer | No | 1-based position (0 or omitted = end) |
+| `layout` | string | Yes | Layout type (see supported layouts below) |
+
+**Supported Layout Types:**
+| Layout | Description |
+|--------|-------------|
+| `BLANK` | Empty slide with no placeholders |
+| `CAPTION_ONLY` | Caption text at bottom |
+| `TITLE` | Title slide |
+| `TITLE_AND_BODY` | Title with body text area |
+| `TITLE_AND_TWO_COLUMNS` | Title with two column layout |
+| `TITLE_ONLY` | Title placeholder only |
+| `ONE_COLUMN_TEXT` | Single column text layout |
+| `MAIN_POINT` | Main point emphasis layout |
+| `BIG_NUMBER` | Large number display layout |
+| `SECTION_HEADER` | Section header slide |
+| `SECTION_TITLE_AND_DESCRIPTION` | Section with description |
+
+**Output:**
+```json
+{
+  "slide_index": 2,
+  "slide_id": "g123456789"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `slide_index` | integer | 1-based index of the new slide |
+| `slide_id` | string | Object ID of the created slide |
+
+**Features:**
+- Position 0 or omitted inserts at the end of the presentation
+- Position beyond the slide count inserts at the end
+- Automatically finds matching layout in the presentation
+- Falls back to first available layout if no exact match
+- Falls back to predefined layout type if presentation has no layouts
+
+**Use Cases:**
+- Adding slides to existing presentations
+- Building presentations programmatically
+- Inserting slides at specific positions in a workflow
+
+**Examples:**
+
+Add a slide at the end:
+```json
+{
+  "presentation_id": "abc123",
+  "layout": "BLANK"
+}
+```
+
+Insert a slide as the second slide:
+```json
+{
+  "presentation_id": "abc123",
+  "position": 2,
+  "layout": "TITLE_AND_BODY"
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid layout type: layout is required` - Missing layout
+- `invalid layout type: unsupported layout 'XXX'` - Unknown layout type
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 *More tools to be documented:*
 
 ### Additional Slide Operations
-- `add_slide` - Add new slides
 - `delete_slide` - Remove slides
 - `reorder_slides` - Change slide order
 - `duplicate_slide` - Clone slides

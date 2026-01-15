@@ -503,6 +503,7 @@ The `internal/tools/` package implements MCP tools for Google Slides operations:
 - Interface-based design (`SlidesService`) for easy mocking in tests
 - `SlidesServiceFactory` pattern for creating services from token sources
 - Tools receive `oauth2.TokenSource` from middleware context
+- `SlidesService.BatchUpdate` used for modification operations (add/delete/reorder slides)
 
 ### get_presentation Tool (`get_presentation.go`)
 Loads a Google Slides presentation and returns its full structured content.
@@ -945,6 +946,75 @@ fmt.Println(output.LayoutDescription)
 - Positions are stored internally in EMU (English Metric Units)
 - 1 point = 12700 EMU
 - Standard slide size: 720 x 405 points
+
+### add_slide Tool (`add_slide.go`)
+Adds a new slide to a presentation.
+
+**Input:**
+```go
+tools.AddSlideInput{
+    PresentationID: "presentation-id",  // Required
+    Position:       1,                  // 1-based position (0 or omitted = end)
+    Layout:         "TITLE_AND_BODY",   // Required - layout type
+}
+```
+
+**Output:**
+```go
+tools.AddSlideOutput{
+    SlideIndex: 3,              // 1-based index of the new slide
+    SlideID:    "slide-id",     // Object ID of the new slide
+}
+```
+
+**Supported Layout Types:**
+- `BLANK` - Empty slide
+- `CAPTION_ONLY` - Caption only
+- `TITLE` - Title slide
+- `TITLE_AND_BODY` - Title with body text
+- `TITLE_AND_TWO_COLUMNS` - Title with two columns
+- `TITLE_ONLY` - Title only
+- `ONE_COLUMN_TEXT` - Single column text
+- `MAIN_POINT` - Main point layout
+- `BIG_NUMBER` - Big number layout
+- `SECTION_HEADER` - Section header
+- `SECTION_TITLE_AND_DESCRIPTION` - Section title with description
+
+**Features:**
+- Position 0 or omitted inserts at end of presentation
+- Position beyond slide count inserts at end
+- Finds matching layout in presentation's layouts first
+- Falls back to first available layout if exact match not found
+- Falls back to predefined layout type if no layouts exist
+
+**Sentinel Errors:**
+```go
+tools.ErrAddSlideFailed         // Generic slide creation failure
+tools.ErrInvalidLayout          // Empty or unsupported layout type
+tools.ErrInvalidPosition        // Invalid position (reserved for future validation)
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Add slide at end with BLANK layout
+output, err := tools.AddSlide(ctx, tokenSource, tools.AddSlideInput{
+    PresentationID: "abc123",
+    Layout:         "BLANK",
+})
+
+// Add slide at specific position
+output, err := tools.AddSlide(ctx, tokenSource, tools.AddSlideInput{
+    PresentationID: "abc123",
+    Position:       2,  // Insert at position 2 (becomes second slide)
+    Layout:         "TITLE_AND_BODY",
+})
+
+fmt.Printf("New slide: index=%d, id=%s\n", output.SlideIndex, output.SlideID)
+```
 
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:

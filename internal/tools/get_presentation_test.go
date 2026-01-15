@@ -14,6 +14,7 @@ type mockSlidesService struct {
 	GetPresentationFunc    func(ctx context.Context, presentationID string) (*slides.Presentation, error)
 	GetThumbnailFunc       func(ctx context.Context, presentationID, pageObjectID string) (*slides.Thumbnail, error)
 	CreatePresentationFunc func(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error)
+	BatchUpdateFunc        func(ctx context.Context, presentationID string, requests []*slides.Request) (*slides.BatchUpdatePresentationResponse, error)
 }
 
 func (m *mockSlidesService) GetPresentation(ctx context.Context, presentationID string) (*slides.Presentation, error) {
@@ -33,6 +34,13 @@ func (m *mockSlidesService) GetThumbnail(ctx context.Context, presentationID, pa
 func (m *mockSlidesService) CreatePresentation(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error) {
 	if m.CreatePresentationFunc != nil {
 		return m.CreatePresentationFunc(ctx, presentation)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockSlidesService) BatchUpdate(ctx context.Context, presentationID string, requests []*slides.Request) (*slides.BatchUpdatePresentationResponse, error) {
+	if m.BatchUpdateFunc != nil {
+		return m.BatchUpdateFunc(ctx, presentationID, requests)
 	}
 	return nil, errors.New("not implemented")
 }

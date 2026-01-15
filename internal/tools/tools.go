@@ -18,6 +18,7 @@ type SlidesService interface {
 	GetPresentation(ctx context.Context, presentationID string) (*slides.Presentation, error)
 	GetThumbnail(ctx context.Context, presentationID, pageObjectID string) (*slides.Thumbnail, error)
 	CreatePresentation(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error)
+	BatchUpdate(ctx context.Context, presentationID string, requests []*slides.Request) (*slides.BatchUpdatePresentationResponse, error)
 }
 
 // SlidesServiceFactory creates a Slides service from a token source.
@@ -44,6 +45,14 @@ func (s *realSlidesService) GetThumbnail(ctx context.Context, presentationID, pa
 // CreatePresentation creates a new presentation.
 func (s *realSlidesService) CreatePresentation(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error) {
 	return s.service.Presentations.Create(presentation).Context(ctx).Do()
+}
+
+// BatchUpdate executes batch update requests on a presentation.
+func (s *realSlidesService) BatchUpdate(ctx context.Context, presentationID string, requests []*slides.Request) (*slides.BatchUpdatePresentationResponse, error) {
+	req := &slides.BatchUpdatePresentationRequest{
+		Requests: requests,
+	}
+	return s.service.Presentations.BatchUpdate(presentationID, req).Context(ctx).Do()
 }
 
 // NewRealSlidesServiceFactory returns a factory that creates real Slides services.
