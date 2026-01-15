@@ -294,7 +294,87 @@ Rate limits can be configured per-endpoint for different use cases:
 The server provides comprehensive tools for Google Slides manipulation:
 
 ### Presentation Management
-- `get_presentation` - Load presentation content
+
+#### `get_presentation`
+
+Load a Google Slides presentation and return its full structured content.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "include_thumbnails": false
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `include_thumbnails` | boolean | No | Include base64-encoded slide thumbnails (default: false) |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "title": "My Presentation",
+  "locale": "en_US",
+  "slides_count": 5,
+  "page_size": {
+    "width": {"magnitude": 720, "unit": "PT"},
+    "height": {"magnitude": 405, "unit": "PT"}
+  },
+  "slides": [
+    {
+      "index": 1,
+      "object_id": "slide-id-1",
+      "layout_id": "layout-id",
+      "layout_name": "Title Slide",
+      "text_content": [
+        {
+          "object_id": "text-box-1",
+          "object_type": "TEXT_BOX",
+          "text": "Hello World"
+        }
+      ],
+      "speaker_notes": "Notes for this slide",
+      "object_count": 3,
+      "objects": [
+        {"object_id": "text-box-1", "object_type": "TEXT_BOX"},
+        {"object_id": "image-1", "object_type": "IMAGE"}
+      ],
+      "thumbnail_base64": "..." // Only if include_thumbnails=true
+    }
+  ],
+  "masters": [
+    {"object_id": "master-1", "name": "Default Master"}
+  ],
+  "layouts": [
+    {"object_id": "layout-1", "name": "Title Slide", "master_id": "master-1", "layout_type": "TITLE"}
+  ]
+}
+```
+
+**Features:**
+- Extracts all text content from slides including shapes, text boxes, and tables
+- Retrieves speaker notes for each slide
+- Returns complete presentation structure including masters and layouts
+- Optionally includes slide thumbnails as base64-encoded images
+- Handles grouped elements recursively
+
+**Object Types Detected:**
+- Shapes: `TEXT_BOX`, `RECTANGLE`, `ELLIPSE`, etc.
+- Media: `IMAGE`, `VIDEO`
+- Containers: `TABLE`, `GROUP`
+- Other: `LINE`, `SHEETS_CHART`, `WORD_ART`
+
+**Errors:**
+- `presentation not found` - The presentation ID doesn't exist
+- `access denied to presentation` - No permission to access the presentation
+- `slides API error` - Other Slides API errors
+
+---
+
+*More tools to be documented:*
 - `search_presentations` - Search for presentations in Drive
 - `copy_presentation` - Copy/duplicate presentations
 - `create_presentation` - Create new presentations

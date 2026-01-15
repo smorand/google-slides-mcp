@@ -495,6 +495,94 @@ limit := limiter.GlobalLimit()
 rate := limiter.GlobalRate()
 ```
 
+## Tools Package
+
+The `internal/tools/` package implements MCP tools for Google Slides operations:
+
+### Architecture
+- Interface-based design (`SlidesService`) for easy mocking in tests
+- `SlidesServiceFactory` pattern for creating services from token sources
+- Tools receive `oauth2.TokenSource` from middleware context
+
+### get_presentation Tool (`get_presentation.go`)
+Loads a Google Slides presentation and returns its full structured content.
+
+**Input:**
+```go
+tools.GetPresentationInput{
+    PresentationID:    "presentation-id",  // Required
+    IncludeThumbnails: true,               // Optional, default false
+}
+```
+
+**Output:**
+```go
+tools.GetPresentationOutput{
+    PresentationID: "presentation-id",
+    Title:          "Presentation Title",
+    Locale:         "en_US",
+    SlidesCount:    10,
+    PageSize:       &PageSize{Width: {720, "PT"}, Height: {405, "PT"}},
+    Slides:         []SlideInfo{...},
+    Masters:        []MasterInfo{...},
+    Layouts:        []LayoutInfo{...},
+}
+```
+
+**SlideInfo Structure:**
+- `Index` - 1-based slide index
+- `ObjectID` - Unique slide identifier
+- `LayoutID`, `LayoutName` - Layout information
+- `TextContent` - Array of `{object_id, object_type, text}`
+- `SpeakerNotes` - Notes content from speaker notes page
+- `ObjectCount` - Number of page elements
+- `Objects` - Array of `{object_id, object_type}`
+- `ThumbnailBase64` - Base64 encoded thumbnail (if requested)
+
+**Sentinel Errors:**
+```go
+tools.ErrPresentationNotFound  // 404 - presentation does not exist
+tools.ErrAccessDenied          // 403 - no permission to access
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Create tools instance
+tools := tools.NewTools(tools.DefaultToolsConfig(), nil)
+
+// Get token source from middleware context
+tokenSource := middleware.GetTokenSource(ctx)
+
+// Call the tool
+output, err := tools.GetPresentation(ctx, tokenSource, tools.GetPresentationInput{
+    PresentationID:    "abc123",
+    IncludeThumbnails: true,
+})
+```
+
+### Text Content Extraction
+- Extracts text from shapes (TEXT_BOX, RECTANGLE, etc.)
+- Extracts text from tables with cell positions `[row,col]: content`
+- Recursively extracts from grouped elements
+- Trims whitespace from extracted text
+
+### Object Type Detection
+Supported object types:
+- `TEXT_BOX`, `RECTANGLE`, `ELLIPSE`, etc. (shapes)
+- `IMAGE`, `VIDEO`, `TABLE`, `LINE`
+- `GROUP`, `SHEETS_CHART`, `WORD_ART`
+
+### Speaker Notes Extraction
+- Looks for BODY placeholder in notes page
+- Falls back to any shape with text if no BODY placeholder
+- Returns empty string if no notes exist
+
+### Thumbnail Fetching
+- Uses Slides API `GetThumbnail` with LARGE size
+- Fetches image data via HTTP and encodes as base64
+- Gracefully handles fetch failures (logs warning, continues)
+
 ## Testing Locally
 
 1. Set up OAuth2 credentials in Secret Manager
