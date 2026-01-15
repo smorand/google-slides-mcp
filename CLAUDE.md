@@ -641,6 +641,60 @@ input := SearchPresentationsInput{Query: "modifiedTime > '2024-01-01'"}
 input := SearchPresentationsInput{Query: "name contains 'Report' and modifiedTime > '2024-01-01'"}
 ```
 
+### copy_presentation Tool (`copy_presentation.go`)
+Copies a Google Slides presentation (useful for templates).
+
+**Input:**
+```go
+tools.CopyPresentationInput{
+    SourceID:            "source-presentation-id",  // Required
+    NewTitle:            "My New Presentation",     // Required
+    DestinationFolderID: "folder-id",               // Optional
+}
+```
+
+**Output:**
+```go
+tools.CopyPresentationOutput{
+    PresentationID: "new-presentation-id",
+    Title:          "My New Presentation",
+    URL:            "https://docs.google.com/presentation/d/new-presentation-id/edit",
+    SourceID:       "source-presentation-id",
+}
+```
+
+**Features:**
+- Creates a copy of the source presentation using Drive API
+- Preserves all formatting, themes, and masters (inherent to Drive copy)
+- Optionally places copy in specified destination folder
+- Returns direct edit URL for the new presentation
+
+**Sentinel Errors:**
+```go
+tools.ErrSourceNotFound     // Source presentation not found
+tools.ErrCopyFailed         // Generic copy failure
+tools.ErrInvalidSourceID    // Empty source ID
+tools.ErrInvalidTitle       // Empty title
+tools.ErrDestinationInvalid // Destination folder not found
+tools.ErrAccessDenied       // No permission to copy
+```
+
+**Usage Pattern:**
+```go
+// Copy a template presentation
+output, err := tools.CopyPresentation(ctx, tokenSource, tools.CopyPresentationInput{
+    SourceID: "template-id",
+    NewTitle: "Q1 2024 Report",
+})
+
+// Copy to specific folder
+output, err := tools.CopyPresentation(ctx, tokenSource, tools.CopyPresentationInput{
+    SourceID:            "template-id",
+    NewTitle:            "Q1 2024 Report",
+    DestinationFolderID: "reports-folder-id",
+})
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
@@ -648,6 +702,7 @@ The tools package uses a `DriveService` interface for Drive API operations:
 // Interface for mocking
 type DriveService interface {
     ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
+    CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
 }
 
 // Factory pattern

@@ -13,11 +13,19 @@ import (
 // mockDriveService implements DriveService for testing.
 type mockDriveService struct {
 	ListFilesFunc func(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
+	CopyFileFunc  func(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
 }
 
 func (m *mockDriveService) ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error) {
 	if m.ListFilesFunc != nil {
 		return m.ListFilesFunc(ctx, query, pageSize, fields)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockDriveService) CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error) {
+	if m.CopyFileFunc != nil {
+		return m.CopyFileFunc(ctx, fileID, file)
 	}
 	return nil, errors.New("not implemented")
 }

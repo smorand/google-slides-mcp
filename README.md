@@ -436,8 +436,56 @@ Search for Google Slides presentations in Google Drive.
 
 ---
 
+#### `copy_presentation`
+
+Copy a Google Slides presentation to create a new one. Useful for creating presentations from templates.
+
+**Input:**
+```json
+{
+  "source_id": "1abc2def3ghi...",
+  "new_title": "Q1 2024 Report",
+  "destination_folder_id": "folder123..."
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source_id` | string | Yes | ID of the presentation to copy |
+| `new_title` | string | Yes | Title for the new presentation |
+| `destination_folder_id` | string | No | Folder to place the copy in (default: root) |
+
+**Output:**
+```json
+{
+  "presentation_id": "new-id-123...",
+  "title": "Q1 2024 Report",
+  "url": "https://docs.google.com/presentation/d/new-id-123.../edit",
+  "source_id": "1abc2def3ghi..."
+}
+```
+
+**Features:**
+- Creates an exact copy of the source presentation
+- Preserves all formatting, themes, masters, and content
+- Places copy in specified folder or user's Drive root
+- Returns direct edit URL for immediate access
+
+**Use Cases:**
+- Creating presentations from company templates
+- Duplicating presentations for different audiences
+- Creating backups before making major changes
+
+**Errors:**
+- `invalid source presentation ID: source_id is required` - Empty source ID
+- `invalid title: new_title is required` - Empty title
+- `source presentation not found` - Source doesn't exist or no access
+- `access denied to source presentation` - No permission to copy
+- `destination folder not found or inaccessible` - Invalid folder ID
+
+---
+
 *More tools to be documented:*
-- `copy_presentation` - Copy/duplicate presentations
 - `create_presentation` - Create new presentations
 - `export_pdf` - Export to PDF format
 

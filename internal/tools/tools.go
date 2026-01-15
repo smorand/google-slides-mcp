@@ -53,6 +53,7 @@ func NewRealSlidesServiceFactory() SlidesServiceFactory {
 // DriveService abstracts the Google Drive API for testing.
 type DriveService interface {
 	ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
+	CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
 }
 
 // DriveServiceFactory creates a Drive service from a token source.
@@ -77,6 +78,14 @@ func (s *realDriveService) ListFiles(ctx context.Context, query string, pageSize
 	}
 
 	return call.Do()
+}
+
+// CopyFile copies a file to a new location with a new name.
+func (s *realDriveService) CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error) {
+	return s.service.Files.Copy(fileID, file).
+		SupportsAllDrives(true).
+		Context(ctx).
+		Do()
 }
 
 // NewRealDriveServiceFactory returns a factory that creates real Drive services.
