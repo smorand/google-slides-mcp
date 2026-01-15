@@ -1,0 +1,46 @@
+# Binary output
+bin/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+.jukit/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ralph workflow files
+ralph.sh
+ralph.yaml
+stories.yaml
+progress.md
+
+# Local configuration
+.env
+.env.local
+*.local.json
+
+# Terraform state (managed separately)
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfplan
