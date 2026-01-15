@@ -374,8 +374,69 @@ Load a Google Slides presentation and return its full structured content.
 
 ---
 
+#### `search_presentations`
+
+Search for Google Slides presentations in Google Drive.
+
+**Input:**
+```json
+{
+  "query": "quarterly report",
+  "max_results": 10
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Search term or Drive query operators |
+| `max_results` | integer | No | Maximum results to return (default: 10, max: 100) |
+
+**Output:**
+```json
+{
+  "presentations": [
+    {
+      "id": "abc123xyz",
+      "title": "Q4 Quarterly Report 2024",
+      "owner": "user@example.com",
+      "modified_date": "2024-01-15T10:30:00Z",
+      "thumbnail_url": "https://drive.google.com/thumbnail/..."
+    }
+  ],
+  "total_results": 5,
+  "query": "quarterly report"
+}
+```
+
+**Features:**
+- Searches owned, shared, and shared drive presentations
+- Only returns Google Slides files (not Docs, Sheets, etc.)
+- Simple queries automatically use full-text search
+- Supports advanced Google Drive search operators
+
+**Advanced Query Examples:**
+```json
+// Search by name
+{"query": "name contains 'Budget'"}
+
+// Search by modification date
+{"query": "modifiedTime > '2024-01-01'"}
+
+// Combined search
+{"query": "name contains 'Report' and modifiedTime > '2024-01-01'"}
+
+// Search shared files
+{"query": "sharedWithMe = true"}
+```
+
+**Errors:**
+- `invalid search query: query is required` - Empty query provided
+- `access denied` - No permission to search Drive
+- `drive API error` - Other Drive API errors
+
+---
+
 *More tools to be documented:*
-- `search_presentations` - Search for presentations in Drive
 - `copy_presentation` - Copy/duplicate presentations
 - `create_presentation` - Create new presentations
 - `export_pdf` - Export to PDF format

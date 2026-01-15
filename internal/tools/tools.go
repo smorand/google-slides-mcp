@@ -6,6 +6,8 @@ import (
 	"log/slog"
 
 	"golang.org/x/oauth2"
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"google.golang.org/api/slides/v1"
 )
@@ -48,6 +50,46 @@ func NewRealSlidesServiceFactory() SlidesServiceFactory {
 	}
 }
 
+// DriveService abstracts the Google Drive API for testing.
+type DriveService interface {
+	ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
+}
+
+// DriveServiceFactory creates a Drive service from a token source.
+type DriveServiceFactory func(ctx context.Context, tokenSource oauth2.TokenSource) (DriveService, error)
+
+// realDriveService wraps the actual Google Drive API.
+type realDriveService struct {
+	service *drive.Service
+}
+
+// ListFiles lists files matching the query.
+func (s *realDriveService) ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error) {
+	call := s.service.Files.List().
+		Q(query).
+		PageSize(pageSize).
+		SupportsAllDrives(true).
+		IncludeItemsFromAllDrives(true).
+		Context(ctx)
+
+	if fields != "" {
+		call = call.Fields(fields)
+	}
+
+	return call.Do()
+}
+
+// NewRealDriveServiceFactory returns a factory that creates real Drive services.
+func NewRealDriveServiceFactory() DriveServiceFactory {
+	return func(ctx context.Context, tokenSource oauth2.TokenSource) (DriveService, error) {
+		service, err := drive.NewService(ctx, option.WithTokenSource(tokenSource))
+		if err != nil {
+			return nil, err
+		}
+		return &realDriveService{service: service}, nil
+	}
+}
+
 // ToolsConfig holds configuration for the tools.
 type ToolsConfig struct {
 	Logger *slog.Logger
@@ -64,19 +106,30 @@ func DefaultToolsConfig() ToolsConfig {
 type Tools struct {
 	config               ToolsConfig
 	slidesServiceFactory SlidesServiceFactory
+	driveServiceFactory  DriveServiceFactory
 }
 
 // NewTools creates a new Tools instance.
+// Deprecated: Use NewToolsWithDrive instead for full functionality.
 func NewTools(config ToolsConfig, slidesFactory SlidesServiceFactory) *Tools {
+	return NewToolsWithDrive(config, slidesFactory, nil)
+}
+
+// NewToolsWithDrive creates a new Tools instance with Drive service support.
+func NewToolsWithDrive(config ToolsConfig, slidesFactory SlidesServiceFactory, driveFactory DriveServiceFactory) *Tools {
 	if config.Logger == nil {
 		config.Logger = slog.Default()
 	}
 	if slidesFactory == nil {
 		slidesFactory = NewRealSlidesServiceFactory()
 	}
+	if driveFactory == nil {
+		driveFactory = NewRealDriveServiceFactory()
+	}
 
 	return &Tools{
 		config:               config,
 		slidesServiceFactory: slidesFactory,
+		driveServiceFactory:  driveFactory,
 	}
 }

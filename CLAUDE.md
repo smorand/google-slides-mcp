@@ -583,6 +583,80 @@ Supported object types:
 - Fetches image data via HTTP and encodes as base64
 - Gracefully handles fetch failures (logs warning, continues)
 
+### search_presentations Tool (`search_presentations.go`)
+Searches for Google Slides presentations in Google Drive.
+
+**Input:**
+```go
+tools.SearchPresentationsInput{
+    Query:      "quarterly report",  // Required - search term
+    MaxResults: 10,                  // Optional, default 10, max 100
+}
+```
+
+**Output:**
+```go
+tools.SearchPresentationsOutput{
+    Presentations: []PresentationResult{...},
+    TotalResults:  5,
+    Query:         "quarterly report",
+}
+
+// Each result contains:
+tools.PresentationResult{
+    ID:           "presentation-id",
+    Title:        "Q4 Report 2024",
+    Owner:        "user@example.com",
+    ModifiedDate: "2024-01-15T10:30:00Z",
+    ThumbnailURL: "https://drive.google.com/thumbnail/...",
+}
+```
+
+**Features:**
+- Searches owned, shared, and shared drive presentations
+- Only returns Google Slides files (filters by mime type)
+- Supports advanced Drive search operators (name contains, modifiedTime, etc.)
+- Simple queries are automatically wrapped in `fullText contains`
+- Escapes special characters in queries
+
+**Sentinel Errors:**
+```go
+tools.ErrDriveAPIError  // Drive API errors
+tools.ErrInvalidQuery   // Empty or invalid query
+tools.ErrAccessDenied   // 403 - no permission
+```
+
+**Advanced Query Examples:**
+```go
+// Simple text search (wrapped in fullText contains)
+input := SearchPresentationsInput{Query: "budget report"}
+
+// Search by name
+input := SearchPresentationsInput{Query: "name contains 'Q4'"}
+
+// Search by modification date
+input := SearchPresentationsInput{Query: "modifiedTime > '2024-01-01'"}
+
+// Combined search
+input := SearchPresentationsInput{Query: "name contains 'Report' and modifiedTime > '2024-01-01'"}
+```
+
+### Drive Service Interface
+The tools package uses a `DriveService` interface for Drive API operations:
+
+```go
+// Interface for mocking
+type DriveService interface {
+    ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
+}
+
+// Factory pattern
+type DriveServiceFactory func(ctx context.Context, tokenSource oauth2.TokenSource) (DriveService, error)
+
+// Create tools with Drive support
+tools := tools.NewToolsWithDrive(config, slidesFactory, driveFactory)
+```
+
 ## Testing Locally
 
 1. Set up OAuth2 credentials in Secret Manager
