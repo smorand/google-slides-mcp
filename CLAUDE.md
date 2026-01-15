@@ -1597,6 +1597,88 @@ output, err := tools.ModifyText(ctx, tokenSource, tools.ModifyTextInput{
 fmt.Printf("Updated text: %s\n", output.UpdatedText)
 ```
 
+### search_text Tool (`search_text.go`)
+Searches for text across all slides in a presentation.
+
+**Input:**
+```go
+tools.SearchTextInput{
+    PresentationID: "presentation-id",  // Required
+    Query:          "search term",      // Required - text to search for
+    CaseSensitive:  false,              // Optional, default false
+}
+```
+
+**Output:**
+```go
+tools.SearchTextOutput{
+    PresentationID: "presentation-id",
+    Query:          "search term",
+    CaseSensitive:  false,
+    TotalMatches:   5,
+    Results:        []SearchTextResult{...},
+}
+
+// Results grouped by slide:
+tools.SearchTextResult{
+    SlideIndex: 1,            // 1-based slide index
+    SlideID:    "slide-id",
+    Matches:    []TextMatch{...},
+}
+
+// Each match contains:
+tools.TextMatch{
+    ObjectID:    "shape-id",      // ID of object containing match
+    ObjectType:  "TEXT_BOX",      // Type of object (TEXT_BOX, TABLE_CELL, SPEAKER_NOTES:TEXT_BOX, etc.)
+    StartIndex:  10,              // Character position of match in text
+    TextContext: "...before MATCH after...",  // Surrounding text (50 chars before/after)
+}
+```
+
+**Features:**
+- Searches across all slides, text shapes, tables, and speaker notes
+- Case-insensitive search by default (configurable)
+- Includes surrounding context (50 characters before/after) for each match
+- Groups results by slide for easy navigation
+- Searches recursively through grouped elements
+- Table cell matches include position in ObjectID (e.g., "table-1[0,2]")
+- Speaker notes matches are prefixed with "SPEAKER_NOTES:" in ObjectType
+
+**Sentinel Errors:**
+```go
+tools.ErrSearchTextFailed       // Generic search failure
+tools.ErrInvalidQuery           // Query is required (empty query)
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to access
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Case-insensitive search (default)
+output, err := tools.SearchText(ctx, tokenSource, tools.SearchTextInput{
+    PresentationID: "abc123",
+    Query:          "important keyword",
+})
+
+// Case-sensitive search
+output, err := tools.SearchText(ctx, tokenSource, tools.SearchTextInput{
+    PresentationID: "abc123",
+    Query:          "Important",
+    CaseSensitive:  true,
+})
+
+// Process results
+fmt.Printf("Found %d matches across %d slides\n", output.TotalMatches, len(output.Results))
+for _, slideResult := range output.Results {
+    fmt.Printf("Slide %d (%s):\n", slideResult.SlideIndex, slideResult.SlideID)
+    for _, match := range slideResult.Matches {
+        fmt.Printf("  - %s at index %d: %s\n", match.ObjectID, match.StartIndex, match.TextContext)
+    }
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

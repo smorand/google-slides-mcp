@@ -1759,11 +1759,122 @@ Delete all text:
 
 ---
 
+#### `search_text`
+
+Search for text across all slides in a presentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "query": "important keyword",
+  "case_sensitive": false
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `query` | string | Yes | Text to search for |
+| `case_sensitive` | boolean | No | Enable case-sensitive search (default: false) |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "query": "important keyword",
+  "case_sensitive": false,
+  "total_matches": 5,
+  "results": [
+    {
+      "slide_index": 1,
+      "slide_id": "g123456",
+      "matches": [
+        {
+          "object_id": "shape-789",
+          "object_type": "TEXT_BOX",
+          "start_index": 25,
+          "text_context": "...text before the important keyword and text after..."
+        }
+      ]
+    },
+    {
+      "slide_index": 3,
+      "slide_id": "g789012",
+      "matches": [
+        {
+          "object_id": "table-1[0,2]",
+          "object_type": "TABLE_CELL",
+          "start_index": 5,
+          "text_context": "This important keyword appears in a table cell"
+        }
+      ]
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `presentation_id` | string | The searched presentation ID |
+| `query` | string | The search query used |
+| `case_sensitive` | boolean | Whether search was case-sensitive |
+| `total_matches` | integer | Total number of matches found |
+| `results` | array | Results grouped by slide |
+| `results[].slide_index` | integer | 1-based slide index |
+| `results[].slide_id` | string | Object ID of the slide |
+| `results[].matches` | array | Matches found on this slide |
+| `matches[].object_id` | string | ID of object containing match (for tables: includes cell position) |
+| `matches[].object_type` | string | Type of object (TEXT_BOX, TABLE_CELL, SPEAKER_NOTES:TEXT_BOX, etc.) |
+| `matches[].start_index` | integer | Character position where match begins |
+| `matches[].text_context` | string | Surrounding text (50 chars before/after the match) |
+
+**Features:**
+- Searches all slides, text shapes, tables, and speaker notes
+- Case-insensitive by default (configurable with `case_sensitive`)
+- Includes surrounding context (50 characters) for each match
+- Results grouped by slide for easy navigation
+- Searches recursively through grouped elements
+- Table cell matches include row/column position in object_id
+- Speaker notes matches are prefixed with "SPEAKER_NOTES:" in object_type
+
+**Use Cases:**
+- Finding specific content in a presentation
+- Locating all occurrences of a term before replacement
+- Reviewing where a keyword appears across slides
+- Finding content in speaker notes
+
+**Examples:**
+
+Case-insensitive search (default):
+```json
+{
+  "presentation_id": "abc123",
+  "query": "revenue"
+}
+```
+
+Case-sensitive search:
+```json
+{
+  "presentation_id": "abc123",
+  "query": "Revenue",
+  "case_sensitive": true
+}
+```
+
+**Errors:**
+- `invalid query: query is required` - Empty search query
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to access
+
+---
+
 *More tools to be documented:*
 
 ### Content Manipulation
 - `add_text` - Add text to existing placeholders
-- `search_text` - Find text across presentation
 - `replace_text` - Find and replace text
 - `style_text` - Apply text formatting
 - `format_paragraph` - Set paragraph styles
