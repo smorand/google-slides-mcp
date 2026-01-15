@@ -1759,6 +1759,144 @@ Delete all text:
 
 ---
 
+#### `style_text`
+
+Apply styling to text in a shape (font, size, color, bold, italic, etc.).
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-789",
+  "start_index": 0,
+  "end_index": 10,
+  "style": {
+    "font_family": "Arial",
+    "font_size": 24,
+    "bold": true,
+    "italic": false,
+    "underline": true,
+    "strikethrough": false,
+    "foreground_color": "#FF0000",
+    "background_color": "#FFFF00",
+    "link_url": "https://example.com"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | The ID of the shape containing text |
+| `start_index` | integer | No | Start character index (0-based). Omit for whole text |
+| `end_index` | integer | No | End character index (exclusive). Omit for whole text |
+| `style` | object | Yes | Style properties to apply |
+| `style.font_family` | string | No | Font family name (e.g., "Arial", "Times New Roman") |
+| `style.font_size` | integer | No | Font size in points |
+| `style.bold` | boolean | No | Apply bold formatting |
+| `style.italic` | boolean | No | Apply italic formatting |
+| `style.underline` | boolean | No | Apply underline formatting |
+| `style.strikethrough` | boolean | No | Apply strikethrough formatting |
+| `style.foreground_color` | string | No | Text color as hex (e.g., "#FF0000") |
+| `style.background_color` | string | No | Text highlight color as hex (e.g., "#FFFF00") |
+| `style.link_url` | string | No | URL to create hyperlink |
+
+**Output:**
+```json
+{
+  "object_id": "shape-789",
+  "applied_styles": [
+    "font_family=Arial",
+    "font_size=24pt",
+    "bold=true",
+    "italic=false",
+    "underline=true",
+    "strikethrough=false",
+    "foreground_color=#FF0000",
+    "background_color=#FFFF00",
+    "link_url=https://example.com"
+  ],
+  "text_range": "FIXED_RANGE (0-10)"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The styled object's ID |
+| `applied_styles` | array | List of style properties that were applied |
+| `text_range` | string | Range description: "ALL" or "FIXED_RANGE (start-end)" |
+
+**Features:**
+- Apply multiple style properties in a single call
+- Style entire text content or specific character ranges
+- Support for all standard text formatting options
+- Boolean values distinguish between "set to false" and "not set"
+- Colors specified as hex strings (#RRGGBB format)
+- Creates clickable hyperlinks with link_url
+
+**Use Cases:**
+- Formatting titles with bold and larger font
+- Highlighting important text with colors
+- Adding hyperlinks to text
+- Applying consistent styling across text elements
+- Removing formatting by setting properties to false
+
+**Examples:**
+
+Make text bold and red:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-789",
+  "style": {
+    "bold": true,
+    "foreground_color": "#FF0000"
+  }
+}
+```
+
+Style specific characters (first 5 characters):
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-789",
+  "start_index": 0,
+  "end_index": 5,
+  "style": {
+    "font_size": 36,
+    "underline": true
+  }
+}
+```
+
+Add hyperlink to text:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-789",
+  "style": {
+    "link_url": "https://example.com",
+    "foreground_color": "#0000FF",
+    "underline": true
+  }
+}
+```
+
+**Errors:**
+- `no style properties provided` - Style object is empty or missing
+- `invalid object_id: object_id is required` - Missing object ID
+- `invalid text range: start_index cannot be negative` - Invalid index
+- `invalid text range: end_index cannot be negative` - Invalid index
+- `invalid text range: start_index cannot be greater than end_index` - Invalid range
+- `object does not contain text` - Object type doesn't support text styling
+- `object does not contain editable text: tables must be styled cell by cell` - Table styling
+- `object not found: object 'xyz' not found in presentation` - Invalid object ID
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 #### `search_text`
 
 Search for text across all slides in a presentation.

@@ -1597,6 +1597,113 @@ output, err := tools.ModifyText(ctx, tokenSource, tools.ModifyTextInput{
 fmt.Printf("Updated text: %s\n", output.UpdatedText)
 ```
 
+### style_text Tool (`style_text.go`)
+Applies styling to text in a shape.
+
+**Input:**
+```go
+tools.StyleTextInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "object-id",        // Required - ID of shape containing text
+    StartIndex:     &startIdx,          // Optional - style from this index
+    EndIndex:       &endIdx,            // Optional - style until this index (whole text if omitted)
+    Style:          &StyleTextStyleSpec{...},  // Required - style properties to apply
+}
+
+// Style specification:
+tools.StyleTextStyleSpec{
+    FontFamily:      "Arial",         // Optional - font family name
+    FontSize:        24,              // Optional - font size in points
+    Bold:            &true,           // Optional - bold (use pointer to distinguish false from unset)
+    Italic:          &true,           // Optional - italic
+    Underline:       &true,           // Optional - underline
+    Strikethrough:   &true,           // Optional - strikethrough
+    ForegroundColor: "#FF0000",       // Optional - text color (hex string)
+    BackgroundColor: "#FFFF00",       // Optional - highlight color (hex string)
+    LinkURL:         "https://...",   // Optional - create hyperlink
+}
+```
+
+**Output:**
+```go
+tools.StyleTextOutput{
+    ObjectID:      "object-id",      // The styled object's ID
+    AppliedStyles: []string{...},    // List of style properties applied (e.g., "font_family=Arial", "bold=true")
+    TextRange:     "ALL",            // Range type: "ALL" or "FIXED_RANGE (start-end)"
+}
+```
+
+**Features:**
+- Apply multiple style properties in a single call
+- Partial styling via start_index/end_index for specific text ranges
+- Boolean properties use pointers to distinguish false from unset
+- Colors are specified as hex strings (#RRGGBB)
+- Link URL creates hyperlinks on the text
+- Invalid colors are silently ignored (other styles still apply)
+
+**Sentinel Errors:**
+```go
+tools.ErrStyleTextFailed        // Generic styling failure
+tools.ErrNoStyleProvided        // No style properties provided (empty style object)
+tools.ErrInvalidObjectID        // Object ID is required
+tools.ErrInvalidTextRange       // Invalid start_index/end_index values
+tools.ErrNotTextObject          // Object does not contain text (tables must be styled cell by cell)
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Apply font family to all text
+output, err := tools.StyleText(ctx, tokenSource, tools.StyleTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Style: &tools.StyleTextStyleSpec{
+        FontFamily: "Arial",
+    },
+})
+
+// Apply multiple styles (bold, italic, color)
+bold := true
+italic := true
+output, err := tools.StyleText(ctx, tokenSource, tools.StyleTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Style: &tools.StyleTextStyleSpec{
+        Bold:            &bold,
+        Italic:          &italic,
+        ForegroundColor: "#FF0000",
+    },
+})
+
+// Apply style to specific text range (characters 0-5)
+start := 0
+end := 5
+output, err := tools.StyleText(ctx, tokenSource, tools.StyleTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    StartIndex:     &start,
+    EndIndex:       &end,
+    Style: &tools.StyleTextStyleSpec{
+        Bold: &bold,
+    },
+})
+
+// Create hyperlink
+output, err := tools.StyleText(ctx, tokenSource, tools.StyleTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Style: &tools.StyleTextStyleSpec{
+        LinkURL: "https://example.com",
+    },
+})
+
+fmt.Printf("Applied styles: %v\n", output.AppliedStyles)
+```
+
 ### search_text Tool (`search_text.go`)
 Searches for text across all slides in a presentation.
 
