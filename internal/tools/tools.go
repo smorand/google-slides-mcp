@@ -17,6 +17,7 @@ import (
 type SlidesService interface {
 	GetPresentation(ctx context.Context, presentationID string) (*slides.Presentation, error)
 	GetThumbnail(ctx context.Context, presentationID, pageObjectID string) (*slides.Thumbnail, error)
+	CreatePresentation(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error)
 }
 
 // SlidesServiceFactory creates a Slides service from a token source.
@@ -40,6 +41,11 @@ func (s *realSlidesService) GetThumbnail(ctx context.Context, presentationID, pa
 		Do()
 }
 
+// CreatePresentation creates a new presentation.
+func (s *realSlidesService) CreatePresentation(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error) {
+	return s.service.Presentations.Create(presentation).Context(ctx).Do()
+}
+
 // NewRealSlidesServiceFactory returns a factory that creates real Slides services.
 func NewRealSlidesServiceFactory() SlidesServiceFactory {
 	return func(ctx context.Context, tokenSource oauth2.TokenSource) (SlidesService, error) {
@@ -56,6 +62,7 @@ type DriveService interface {
 	ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
 	CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
 	ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
+	MoveFile(ctx context.Context, fileID string, folderID string) error
 }
 
 // DriveServiceFactory creates a Drive service from a token source.
@@ -99,6 +106,37 @@ func (s *realDriveService) ExportFile(ctx context.Context, fileID string, mimeTy
 		return nil, err
 	}
 	return resp.Body, nil
+}
+
+// MoveFile moves a file to a new folder by updating its parents.
+func (s *realDriveService) MoveFile(ctx context.Context, fileID string, folderID string) error {
+	// Get current file to find existing parents
+	file, err := s.service.Files.Get(fileID).
+		Fields("parents").
+		SupportsAllDrives(true).
+		Context(ctx).
+		Do()
+	if err != nil {
+		return err
+	}
+
+	// Build list of current parents to remove
+	var previousParents string
+	if len(file.Parents) > 0 {
+		previousParents = file.Parents[0]
+		for i := 1; i < len(file.Parents); i++ {
+			previousParents += "," + file.Parents[i]
+		}
+	}
+
+	// Move file to new folder
+	_, err = s.service.Files.Update(fileID, nil).
+		AddParents(folderID).
+		RemoveParents(previousParents).
+		SupportsAllDrives(true).
+		Context(ctx).
+		Do()
+	return err
 }
 
 // NewRealDriveServiceFactory returns a factory that creates real Drive services.

@@ -740,6 +740,56 @@ output, err := tools.ExportPDF(ctx, tokenSource, tools.ExportPDFInput{
 pdfData, _ := base64.StdEncoding.DecodeString(output.PDFBase64)
 ```
 
+### create_presentation Tool (`create_presentation.go`)
+Creates a new empty Google Slides presentation.
+
+**Input:**
+```go
+tools.CreatePresentationInput{
+    Title:    "My New Presentation",  // Required
+    FolderID: "folder-id",            // Optional - destination folder
+}
+```
+
+**Output:**
+```go
+tools.CreatePresentationOutput{
+    PresentationID: "new-presentation-id",
+    Title:          "My New Presentation",
+    URL:            "https://docs.google.com/presentation/d/new-presentation-id/edit",
+    FolderID:       "folder-id",  // Only if specified in input
+}
+```
+
+**Features:**
+- Creates presentation via Slides API (Presentations.Create)
+- Optionally moves to specified folder via Drive API
+- Returns direct edit URL for immediate access
+
+**Sentinel Errors:**
+```go
+tools.ErrCreateFailed       // Generic creation failure
+tools.ErrInvalidCreateTitle // Empty title provided
+tools.ErrFolderNotFound     // Destination folder not found
+tools.ErrAccessDenied       // No permission to create or access folder
+tools.ErrSlidesAPIError     // Slides API errors
+tools.ErrDriveAPIError      // Drive API errors (for folder operations)
+```
+
+**Usage Pattern:**
+```go
+// Create presentation in root
+output, err := tools.CreatePresentation(ctx, tokenSource, tools.CreatePresentationInput{
+    Title: "Q1 2024 Report",
+})
+
+// Create presentation in specific folder
+output, err := tools.CreatePresentation(ctx, tokenSource, tools.CreatePresentationInput{
+    Title:    "Q1 2024 Report",
+    FolderID: "reports-folder-id",
+})
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
@@ -749,6 +799,7 @@ type DriveService interface {
     ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
     CopyFile(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
     ExportFile(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
+    MoveFile(ctx context.Context, fileID string, folderID string) error
 }
 
 // Factory pattern

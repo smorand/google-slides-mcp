@@ -542,8 +542,59 @@ const url = URL.createObjectURL(blob);
 
 ---
 
+#### `create_presentation`
+
+Create a new empty Google Slides presentation.
+
+**Input:**
+```json
+{
+  "title": "My New Presentation",
+  "folder_id": "folder-id-optional"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `title` | string | Yes | Title for the new presentation |
+| `folder_id` | string | No | Google Drive folder ID to place the presentation in |
+
+**Output:**
+```json
+{
+  "presentation_id": "new-presentation-id",
+  "title": "My New Presentation",
+  "url": "https://docs.google.com/presentation/d/new-presentation-id/edit",
+  "folder_id": "folder-id-optional"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `presentation_id` | string | Unique ID of the created presentation |
+| `title` | string | Title of the presentation |
+| `url` | string | Direct edit URL for the presentation |
+| `folder_id` | string | Folder ID if specified in input (omitted otherwise) |
+
+**Features:**
+- Creates a new empty presentation via Slides API
+- Optionally places the presentation in a specific folder
+- Returns direct edit URL for immediate access
+
+**Use Cases:**
+- Creating new presentations from scratch
+- Setting up presentation structure programmatically
+- Organizing presentations into specific folders
+
+**Errors:**
+- `invalid title for presentation: title is required` - Empty title
+- `access denied` - No permission to create presentations
+- `destination folder not found or inaccessible` - Invalid folder ID
+- `failed to create presentation` - Creation failed
+
+---
+
 *More tools to be documented:*
-- `create_presentation` - Create new presentations
 
 ### Slide Operations
 - `list_slides` - List all slides

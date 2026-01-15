@@ -11,8 +11,9 @@ import (
 
 // mockSlidesService implements SlidesService for testing.
 type mockSlidesService struct {
-	GetPresentationFunc func(ctx context.Context, presentationID string) (*slides.Presentation, error)
-	GetThumbnailFunc    func(ctx context.Context, presentationID, pageObjectID string) (*slides.Thumbnail, error)
+	GetPresentationFunc    func(ctx context.Context, presentationID string) (*slides.Presentation, error)
+	GetThumbnailFunc       func(ctx context.Context, presentationID, pageObjectID string) (*slides.Thumbnail, error)
+	CreatePresentationFunc func(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error)
 }
 
 func (m *mockSlidesService) GetPresentation(ctx context.Context, presentationID string) (*slides.Presentation, error) {
@@ -25,6 +26,13 @@ func (m *mockSlidesService) GetPresentation(ctx context.Context, presentationID 
 func (m *mockSlidesService) GetThumbnail(ctx context.Context, presentationID, pageObjectID string) (*slides.Thumbnail, error) {
 	if m.GetThumbnailFunc != nil {
 		return m.GetThumbnailFunc(ctx, presentationID, pageObjectID)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockSlidesService) CreatePresentation(ctx context.Context, presentation *slides.Presentation) (*slides.Presentation, error) {
+	if m.CreatePresentationFunc != nil {
+		return m.CreatePresentationFunc(ctx, presentation)
 	}
 	return nil, errors.New("not implemented")
 }

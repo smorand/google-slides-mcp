@@ -16,6 +16,7 @@ type mockDriveService struct {
 	ListFilesFunc  func(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error)
 	CopyFileFunc   func(ctx context.Context, fileID string, file *drive.File) (*drive.File, error)
 	ExportFileFunc func(ctx context.Context, fileID string, mimeType string) (io.ReadCloser, error)
+	MoveFileFunc   func(ctx context.Context, fileID string, folderID string) error
 }
 
 func (m *mockDriveService) ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error) {
@@ -37,6 +38,13 @@ func (m *mockDriveService) ExportFile(ctx context.Context, fileID string, mimeTy
 		return m.ExportFileFunc(ctx, fileID, mimeType)
 	}
 	return nil, errors.New("not implemented")
+}
+
+func (m *mockDriveService) MoveFile(ctx context.Context, fileID string, folderID string) error {
+	if m.MoveFileFunc != nil {
+		return m.MoveFileFunc(ctx, fileID, folderID)
+	}
+	return errors.New("not implemented")
 }
 
 func TestSearchPresentations_Success(t *testing.T) {
