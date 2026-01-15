@@ -978,10 +978,110 @@ Delete by slide ID:
 
 ---
 
+#### `reorder_slides`
+
+Move slides to new positions within a presentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_indices": [3, 5],
+  "insert_at": 1
+}
+```
+
+Or by slide IDs:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_ids": ["g123456", "g789012"],
+  "insert_at": 2
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_indices` | array[int] | No* | 1-based indices of slides to move |
+| `slide_ids` | array[string] | No* | Object IDs of slides to move |
+| `insert_at` | integer | Yes | 1-based position to move slides to |
+
+*Either `slide_indices` or `slide_ids` is required. If both are provided, `slide_ids` takes precedence.
+
+**Output:**
+```json
+{
+  "new_order": [
+    {"index": 1, "slide_id": "g123456"},
+    {"index": 2, "slide_id": "g789012"},
+    {"index": 3, "slide_id": "g111111"},
+    {"index": 4, "slide_id": "g222222"}
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `new_order` | array | Complete slide order after reordering |
+| `new_order[].index` | integer | 1-based position in new order |
+| `new_order[].slide_id` | string | Object ID of the slide |
+
+**Features:**
+- Move single or multiple slides at once
+- Slides moved together maintain their relative order
+- Insert position beyond slide count clamps to end
+- Returns complete new slide order for verification
+
+**Use Cases:**
+- Reorganizing presentation flow
+- Moving sections to different positions
+- Reordering slides after review feedback
+- Batch slide organization
+
+**Examples:**
+
+Move third slide to the beginning:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_indices": [3],
+  "insert_at": 1
+}
+```
+
+Move slides 2 and 4 to the end:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_indices": [2, 4],
+  "insert_at": 10
+}
+```
+
+Move specific slides by ID:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_ids": ["g987654", "g123456"],
+  "insert_at": 3
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `no slides specified to move: either slide_indices or slide_ids is required` - No slides specified
+- `invalid insert_at position: insert_at must be at least 1` - Invalid position
+- `slide not found: slide index X out of range (1-N)` - Index out of bounds
+- `slide not found: slide with ID 'X' not found` - Slide ID doesn't exist
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 *More tools to be documented:*
 
 ### Additional Slide Operations
-- `reorder_slides` - Change slide order
 - `duplicate_slide` - Clone slides
 
 ### Content Manipulation

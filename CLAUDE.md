@@ -1071,6 +1071,71 @@ output, err := tools.DeleteSlide(ctx, tokenSource, tools.DeleteSlideInput{
 fmt.Printf("Deleted: %s, Remaining: %d\n", output.DeletedSlideID, output.RemainingSlideCount)
 ```
 
+### reorder_slides Tool (`reorder_slides.go`)
+Moves slides to new positions within a presentation.
+
+**Input:**
+```go
+tools.ReorderSlidesInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndices:   []int{2, 4},        // 1-based indices (use this OR SlideIDs)
+    SlideIDs:       []string{"id1"},    // Alternative to SlideIndices
+    InsertAt:       1,                  // 1-based position to move slides to
+}
+```
+
+**Output:**
+```go
+tools.ReorderSlidesOutput{
+    NewOrder: []SlidePosition{
+        {Index: 1, SlideID: "slide-moved"},
+        {Index: 2, SlideID: "slide-original-1"},
+        // ... all slides in new order
+    },
+}
+```
+
+**Features:**
+- Accepts either 1-based slide indices OR slide IDs for identification
+- If both provided, SlideIDs takes precedence
+- Moves multiple slides together maintaining their relative order
+- insert_at beyond slide count is clamped to end
+- Returns complete new slide order after reordering
+
+**Sentinel Errors:**
+```go
+tools.ErrReorderSlidesFailed    // Generic reorder failure
+tools.ErrNoSlidesToMove         // Neither slide_indices nor slide_ids provided
+tools.ErrInvalidInsertAt        // insert_at must be at least 1
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Move single slide by index
+output, err := tools.ReorderSlides(ctx, tokenSource, tools.ReorderSlidesInput{
+    PresentationID: "abc123",
+    SlideIndices:   []int{3},  // Move third slide
+    InsertAt:       1,         // To first position
+})
+
+// Move multiple slides by ID
+output, err := tools.ReorderSlides(ctx, tokenSource, tools.ReorderSlidesInput{
+    PresentationID: "abc123",
+    SlideIDs:       []string{"slide-x", "slide-y"},
+    InsertAt:       5,  // Move to position 5
+})
+
+// Print new order
+for _, pos := range output.NewOrder {
+    fmt.Printf("Position %d: %s\n", pos.Index, pos.SlideID)
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
