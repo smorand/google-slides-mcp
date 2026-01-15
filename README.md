@@ -1629,11 +1629,140 @@ Add a styled title:
 
 ---
 
+#### `modify_text`
+
+Modify text content in an existing shape (replace, append, prepend, or delete).
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "g123456789",
+  "action": "replace",
+  "text": "New text content"
+}
+```
+
+For partial replacement:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "g123456789",
+  "action": "replace",
+  "text": "REPLACED",
+  "start_index": 5,
+  "end_index": 10
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the shape containing text to modify |
+| `action` | string | Yes | Action to perform: `replace`, `append`, `prepend`, or `delete` |
+| `text` | string | Conditional | New text content (required for replace/append/prepend, not for delete) |
+| `start_index` | integer | No | Start index for partial replacement (0-based) |
+| `end_index` | integer | No | End index for partial replacement (0-based, exclusive) |
+
+**Actions:**
+
+| Action | Description |
+|--------|-------------|
+| `replace` | Replace all text in the shape, or partial text if indices provided |
+| `append` | Add text at the end of existing content |
+| `prepend` | Add text at the beginning of existing content |
+| `delete` | Remove all text from the shape |
+
+**Output:**
+```json
+{
+  "object_id": "g123456789",
+  "updated_text": "New text content",
+  "action": "replace"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The modified object's ID |
+| `updated_text` | string | The resulting text content after modification |
+| `action` | string | The action that was performed |
+
+**Features:**
+- Supports four actions: replace all, append, prepend, delete
+- Partial replacement using start_index/end_index for surgical edits
+- Works with any shape containing text (TEXT_BOX, RECTANGLE, etc.)
+- Returns the expected resulting text for confirmation
+- Validates that target object supports text modification
+
+**Use Cases:**
+- Updating placeholder text with actual content
+- Appending timestamps or signatures to existing text
+- Clearing text boxes before re-populating
+- Making targeted edits within existing text
+
+**Examples:**
+
+Replace all text in a shape:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "title-shape",
+  "action": "replace",
+  "text": "Q1 2024 Report"
+}
+```
+
+Append text to existing content:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "body-shape",
+  "action": "append",
+  "text": "\n\nLast updated: January 2024"
+}
+```
+
+Replace part of the text (characters 5-10):
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "action": "replace",
+  "text": "NEW",
+  "start_index": 5,
+  "end_index": 10
+}
+```
+
+Delete all text:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "action": "delete"
+}
+```
+
+**Errors:**
+- `invalid action: action must be 'replace', 'append', 'prepend', or 'delete'` - Unknown action
+- `text is required for this action: text is required for 'replace' action` - Missing text
+- `invalid object_id: object_id is required` - Missing object ID
+- `invalid text range: start_index cannot be negative` - Invalid index
+- `invalid text range: start_index cannot be greater than end_index` - Invalid range
+- `object does not contain editable text` - Object type doesn't support text
+- `object does not contain editable text: tables must be modified cell by cell` - Table modification
+- `object not found: object 'xyz' not found in presentation` - Invalid object ID
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 *More tools to be documented:*
 
 ### Content Manipulation
 - `add_text` - Add text to existing placeholders
-- `modify_text` - Edit text content
 - `search_text` - Find text across presentation
 - `replace_text` - Find and replace text
 - `style_text` - Apply text formatting

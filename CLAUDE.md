@@ -1503,6 +1503,100 @@ output, err := tools.AddTextBox(ctx, tokenSource, tools.AddTextBoxInput{
 fmt.Printf("Created text box: %s\n", output.ObjectID)
 ```
 
+### modify_text Tool (`modify_text.go`)
+Modifies text content in an existing shape.
+
+**Input:**
+```go
+tools.ModifyTextInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "object-id",        // Required - ID of shape containing text
+    Action:         "replace",          // Required: "replace", "append", "prepend", or "delete"
+    Text:           "New text",         // Required for replace/append/prepend (not for delete)
+    StartIndex:     &startIdx,          // Optional - for partial replacement
+    EndIndex:       &endIdx,            // Optional - for partial replacement
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `replace` | Replace all text (or partial if indices provided) |
+| `append` | Add text at the end of existing content |
+| `prepend` | Add text at the beginning of existing content |
+| `delete` | Remove all text from the shape |
+
+**Output:**
+```go
+tools.ModifyTextOutput{
+    ObjectID:    "object-id",     // The modified object's ID
+    UpdatedText: "New text",      // The resulting text content
+    Action:      "replace",       // The action that was performed
+}
+```
+
+**Features:**
+- Supports four actions: replace, append, prepend, delete
+- Partial replacement via optional start_index/end_index
+- Works with shapes containing text (TEXT_BOX, RECTANGLE, etc.)
+- Validates that target object supports text modification
+- Tables must be modified cell by cell (returns specific error)
+
+**Sentinel Errors:**
+```go
+tools.ErrModifyTextFailed   // Generic modification failure
+tools.ErrInvalidAction      // Action must be 'replace', 'append', 'prepend', or 'delete'
+tools.ErrInvalidObjectID    // Object ID is required
+tools.ErrTextRequired       // Text is required for this action (not delete)
+tools.ErrInvalidTextRange   // Invalid start_index/end_index values
+tools.ErrNotTextObject      // Object does not contain editable text
+tools.ErrObjectNotFound     // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Replace all text in a shape
+output, err := tools.ModifyText(ctx, tokenSource, tools.ModifyTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "replace",
+    Text:           "New content",
+})
+
+// Append text to existing content
+output, err := tools.ModifyText(ctx, tokenSource, tools.ModifyTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "append",
+    Text:           " - additional text",
+})
+
+// Partial replacement (replace characters 5-10)
+start := 5
+end := 10
+output, err := tools.ModifyText(ctx, tokenSource, tools.ModifyTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "replace",
+    Text:           "REPLACED",
+    StartIndex:     &start,
+    EndIndex:       &end,
+})
+
+// Delete all text
+output, err := tools.ModifyText(ctx, tokenSource, tools.ModifyTextInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "delete",
+})
+
+fmt.Printf("Updated text: %s\n", output.UpdatedText)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
