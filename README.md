@@ -2093,6 +2093,101 @@ Full preset names are also accepted (e.g., `BULLET_DISC_CIRCLE_SQUARE`).
 
 ---
 
+#### `create_numbered_list`
+
+Convert text to a numbered list or add numbering to existing text in a shape.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "number_style": "DECIMAL",
+  "start_number": 1,
+  "paragraph_indices": [0, 2]
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the shape containing text |
+| `number_style` | string | Yes | Number style name or full preset name |
+| `start_number` | integer | No | Starting number (default: 1) |
+| `paragraph_indices` | array | No | 0-based indices of paragraphs to apply numbering to (all if omitted) |
+
+**Number Styles:**
+
+| User-Friendly Name | API Preset | Description |
+|--------------------|------------|-------------|
+| `DECIMAL` | NUMBERED_DECIMAL_ALPHA_ROMAN | 1, 2, 3... |
+| `ALPHA_UPPER` | NUMBERED_UPPERALPHA_ALPHA_ROMAN | A, B, C... |
+| `ALPHA_LOWER` | NUMBERED_ALPHA_ALPHA_ROMAN | a, b, c... |
+| `ROMAN_UPPER` | NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL | I, II, III... |
+| `ROMAN_LOWER` | NUMBERED_ROMAN_UPPERALPHA_DECIMAL | i, ii, iii... |
+
+Full preset names are also accepted (e.g., `NUMBERED_DECIMAL_NESTED`, `NUMBERED_DECIMAL_ALPHA_ROMAN_PARENS`).
+
+**Output:**
+```json
+{
+  "object_id": "textbox_123",
+  "number_preset": "NUMBERED_DECIMAL_ALPHA_ROMAN",
+  "paragraph_scope": "ALL",
+  "start_number": 1
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | ID of the modified object |
+| `number_preset` | string | The actual API preset that was applied |
+| `paragraph_scope` | string | `"ALL"` or `"INDICES [0, 2]"` indicating which paragraphs received numbering |
+| `start_number` | integer | The start number that was applied |
+
+**Example - Apply decimal numbering to all paragraphs:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "number_style": "DECIMAL"
+}
+```
+
+**Example - Apply uppercase Roman numerals:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "number_style": "ROMAN_UPPER"
+}
+```
+
+**Example - Apply lowercase alphabetic numbering to specific paragraphs:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "textbox_123",
+  "number_style": "ALPHA_LOWER",
+  "paragraph_indices": [0, 2, 4]
+}
+```
+
+**Errors:**
+- `invalid number_style: number_style is required` - Empty number style
+- `invalid number_style: 'XYZ' is not a valid number style` - Invalid style name
+- `invalid start_number: start_number must be at least 1` - Start number less than 1
+- `invalid paragraph_index: paragraph indices cannot be negative` - Negative index
+- `invalid paragraph_index: paragraph index N is out of range (object has M paragraphs)` - Index too large
+- `object does not contain text` - Object type doesn't support numbering
+- `object does not contain editable text: tables must have numbering applied cell by cell` - Table object
+- `object not found: object 'xyz' not found in presentation` - Invalid object ID
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+
+---
+
 #### `search_text`
 
 Search for text across all slides in a presentation.
@@ -2337,6 +2432,7 @@ Delete text (replace with empty):
 - `style_text` - Apply text formatting
 - `format_paragraph` - Set paragraph styles
 - `create_bullet_list` - Convert text to bullet lists
+- `create_numbered_list` - Convert text to numbered lists
 
 ### Media and Objects
 - `add_image` - Insert images

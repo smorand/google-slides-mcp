@@ -1,0 +1,1626 @@
+- id: US-00001
+  title: Initialize Go project with MCP structure
+  priority: 1
+  description: 'Create the base Go project structure for an HTTP streamable MCP server:
+
+    - go.mod with module name github.com/smorand/google-slides-mcp
+
+    - Directory structure: cmd/, internal/, pkg/, terraform/, scripts/
+
+    - Makefile with standard targets (build, test, run, deploy)
+
+    - README.md with project overview
+
+    - CLAUDE.md with development guidelines
+
+    - .gitignore for Go projects
+
+    '
+  tests:
+  - go.mod exists with correct module name
+  - Directory structure cmd/, internal/, pkg/, terraform/ exists
+  - Makefile exists with build, test, run targets
+  - README.md exists with project description
+  - CLAUDE.md exists
+  - 'Command: go build ./... succeeds'
+  passes: true
+- id: US-00002
+  title: Implement HTTP streamable MCP transport layer
+  priority: 1
+  description: 'Implement the MCP server using HTTP streamable transport (not SSE):
+
+    - HTTP server listening on configurable port (default 8080)
+
+    - MCP protocol handler for JSON-RPC over HTTP
+
+    - Streamable responses using chunked transfer encoding
+
+    - Health check endpoint at /health
+
+    - Graceful shutdown handling
+
+    - Request logging middleware
+
+    - CORS configuration for cross-origin requests
+
+    '
+  tests:
+  - Server starts and listens on configured port
+  - /health returns 200 OK
+  - MCP initialize handshake works correctly
+  - Chunked transfer encoding is used for responses
+  - Graceful shutdown completes pending requests
+  - 'Command: go test ./internal/transport/... passes'
+  passes: true
+- id: US-00003
+  title: Create Terraform infrastructure for Cloud Run
+  priority: 1
+  description: 'Create Terraform configuration for GCP Cloud Run deployment:
+
+    - Cloud Run service with configurable scaling
+
+    - Secret Manager for OAuth2 credentials storage
+
+    - Firestore database for API keys and refresh tokens
+
+    - IAM roles and service accounts
+
+    - Cloud Build trigger for CI/CD
+
+    - config.yaml for environment-specific configuration
+
+    - Makefile targets: plan, deploy, undeploy, init-plan, init-deploy
+
+
+    Follow the terraform skill conventions with provider.tf, local.tf, etc.
+
+    '
+  tests:
+  - terraform/provider.tf exists with google provider
+  - terraform/cloudrun.tf defines Cloud Run service
+  - terraform/firestore.tf defines Firestore database
+  - terraform/secrets.tf defines Secret Manager secrets
+  - terraform/iam.tf defines service accounts and roles
+  - 'Command: cd terraform && terraform validate succeeds'
+  passes: true
+- id: US-00004
+  title: Implement Dockerfile and Cloud Build configuration
+  priority: 1
+  description: 'Create containerization for Cloud Run:
+
+    - Multi-stage Dockerfile (build + runtime)
+
+    - Distroless base image for security
+
+    - cloudbuild.yaml for automated builds
+
+    - Build arguments for version tagging
+
+    - Non-root user execution
+
+    '
+  tests:
+  - Dockerfile exists with multi-stage build
+  - cloudbuild.yaml exists with build steps
+  - 'Command: docker build -t google-slides-mcp . succeeds'
+  - Container runs as non-root user
+  passes: true
+- id: US-00005
+  title: Implement OAuth2 flow with /auth endpoint
+  priority: 2
+  description: 'Create the /auth endpoint for OAuth2 authentication flow:
+
+    - GET /auth initiates OAuth2 flow, returns authorization URL
+
+    - GET /auth/callback receives OAuth2 callback with code
+
+    - Exchange code for access token and refresh token
+
+    - OAuth2 credentials loaded from Secret Manager
+
+    - Credential format matches ~/.credentials/scm-pwd.json structure
+
+    - Scopes: Google Slides API, Google Drive API, Google Translate API
+
+    '
+  tests:
+  - GET /auth returns authorization URL with correct scopes
+  - OAuth2 callback exchanges code for tokens
+  - Refresh token is obtained and stored
+  - Credentials are loaded from Secret Manager
+  - 'Command: go test ./internal/auth/... passes'
+  passes: true
+- id: US-00006
+  title: Implement API key generation and storage
+  priority: 2
+  description: 'After successful OAuth2 flow, generate and store API key:
+
+    - Generate UUID-format API key
+
+    - Store in Firestore: api_key -> {refresh_token, user_email, created_at, last_used}
+
+    - Return API key to user (shown only once)
+
+    - Index on api_key field for fast lookups
+
+    - TTL consideration for cleanup of unused keys (optional config)
+
+    '
+  tests:
+  - API key is generated in UUID format
+  - API key and refresh token are stored in Firestore
+  - API key is returned to user after OAuth2 completion
+  - Firestore document contains required fields
+  - 'Command: go test ./internal/auth/... passes'
+  passes: true
+- id: US-00007
+  title: Implement API key validation middleware
+  priority: 2
+  description: 'Create middleware to validate API key on all MCP tool calls:
+
+    - Extract API key from Authorization header (Bearer token)
+
+    - Lookup API key in Firestore
+
+    - Retrieve refresh token for the API key
+
+    - Create Google API client with refresh token
+
+    - Update last_used timestamp on each request
+
+    - Return 401 Unauthorized for invalid/missing API key
+
+    - Cache tokens in memory with TTL to reduce Firestore reads
+
+    '
+  tests:
+  - Requests without API key return 401
+  - Requests with invalid API key return 401
+  - Valid API key allows request to proceed
+  - Google API client is created with refresh token
+  - last_used is updated in Firestore
+  - Token caching reduces Firestore reads
+  - 'Command: go test ./internal/middleware/... passes'
+  passes: true
+- id: US-00008
+  title: Implement permission verification before modifications
+  priority: 2
+  description: 'Before modifying a presentation, verify user has edit permissions:
+
+    - Call Drive API to get file permissions
+
+    - Check if user has ''writer'' or ''owner'' role
+
+    - Return clear error message if user lacks permission
+
+    - Cache permission checks with short TTL (5 minutes)
+
+    '
+  tests:
+  - Read-only operations work without write permission
+  - Write operations fail with clear error if no write permission
+  - Permission check is cached
+  - Error message indicates permission issue clearly
+  - 'Command: go test ./internal/permissions/... passes'
+  passes: true
+- id: US-00009
+  title: Implement global rate limiting
+  priority: 2
+  description: 'Protect the service with global rate limiting:
+
+    - Token bucket algorithm for rate limiting
+
+    - Configurable requests per second limit
+
+    - Per-endpoint rate limiting option
+
+    - Return 429 Too Many Requests when exceeded
+
+    - Include Retry-After header in 429 responses
+
+    - Rate limit status in response headers (X-RateLimit-*)
+
+    '
+  tests:
+  - Rate limiting kicks in when threshold exceeded
+  - 429 response includes Retry-After header
+  - X-RateLimit headers show remaining quota
+  - Configuration allows adjusting limits
+  - 'Command: go test ./internal/ratelimit/... passes'
+  passes: true
+- id: US-00010
+  title: Implement tool to load presentation into LLM context
+  priority: 3
+  description: 'MCP Tool: get_presentation
+
+    Load a Google Slides presentation and return full structured content:
+
+    - Input: presentation_id (string, required)
+
+    - Returns: JSON with complete presentation structure
+
+    - Include: title, slides count, all text content, object descriptions
+
+    - Include: slide thumbnails as base64 (optional parameter)
+
+    - Include: speaker notes for each slide
+
+    - Clear documentation in tool description for LLM understanding
+
+    '
+  tests:
+  - Tool loads presentation by ID
+  - Returns complete presentation structure as JSON
+  - Text content from all slides is included
+  - Speaker notes are included
+  - Thumbnail option works when enabled
+  - 'Command: go test ./internal/tools/... -run TestGetPresentation passes'
+  passes: true
+- id: US-00011
+  title: Implement tool to search presentations in Google Drive
+  priority: 3
+  description: 'MCP Tool: search_presentations
+
+    Search for Google Slides presentations in Drive:
+
+    - Input: query (string, search term), max_results (int, default 10)
+
+    - Search in full Drive (owned + shared + shared drives)
+
+    - Filter: mimeType = ''application/vnd.google-apps.presentation''
+
+    - Returns: list of {id, title, owner, modified_date, thumbnail_url}
+
+    - Support for advanced Drive search operators
+
+    '
+  tests:
+  - Tool searches presentations by name/content
+  - Only returns Google Slides files (not Docs/Sheets)
+  - Results include id, title, owner, modified_date
+  - max_results parameter limits results
+  - Shared presentations are included in results
+  - 'Command: go test ./internal/tools/... -run TestSearchPresentations passes'
+  passes: true
+- id: US-00012
+  title: Implement tool to copy presentation from template
+  priority: 3
+  description: 'MCP Tool: copy_presentation
+
+    Copy a presentation (useful for templates):
+
+    - Input: source_id (string), new_title (string), destination_folder_id (string,
+    optional)
+
+    - Creates a copy of the source presentation
+
+    - Preserves all formatting, themes, masters
+
+    - Returns: new presentation ID and URL
+
+    '
+  tests:
+  - Tool copies presentation successfully
+  - New title is applied to copy
+  - Formatting and theme are preserved
+  - Returns new presentation ID
+  - Destination folder is respected if provided
+  - 'Command: go test ./internal/tools/... -run TestCopyPresentation passes'
+  passes: true
+- id: US-00013
+  title: Implement tool to export presentation as PDF
+  priority: 3
+  description: 'MCP Tool: export_pdf
+
+    Export presentation to PDF format:
+
+    - Input: presentation_id (string)
+
+    - Exports using Drive API export functionality
+
+    - Returns: PDF content as base64 encoded string
+
+    - Include metadata: page_count, file_size
+
+    '
+  tests:
+  - Tool exports presentation to PDF
+  - PDF is returned as base64 string
+  - Metadata includes page count and file size
+  - Export works for presentations with various content types
+  - 'Command: go test ./internal/tools/... -run TestExportPDF passes'
+  passes: true
+- id: US-00014
+  title: Implement tool to create new presentation
+  priority: 3
+  description: 'MCP Tool: create_presentation
+
+    Create a new empty presentation:
+
+    - Input: title (string), folder_id (string, optional)
+
+    - Creates presentation in specified folder or root
+
+    - Returns: presentation ID, URL
+
+    - Option to apply a theme from theme gallery
+
+    '
+  tests:
+  - Tool creates new presentation
+  - Title is correctly set
+  - Folder placement works
+  - Returns presentation ID and URL
+  - 'Command: go test ./internal/tools/... -run TestCreatePresentation passes'
+  passes: true
+- id: US-00015
+  title: Implement tool to list slides in presentation
+  priority: 4
+  description: 'MCP Tool: list_slides
+
+    List all slides in a presentation with metadata:
+
+    - Input: presentation_id (string)
+
+    - Returns: array of {index (1-based), slide_id, title, layout_type, object_count}
+
+    - Include thumbnail base64 for each slide (optional parameter)
+
+    - Summary statistics: total slides, slides with notes, slides with videos
+
+    '
+  tests:
+  - Tool lists all slides with correct indices (1-based)
+  - Each slide includes slide_id and layout type
+  - Thumbnail option works
+  - Statistics are accurate
+  - 'Command: go test ./internal/tools/... -run TestListSlides passes'
+  passes: true
+- id: US-00016
+  title: Implement tool to describe slide content
+  priority: 4
+  description: 'MCP Tool: describe_slide
+
+    Get detailed human-readable description of a slide:
+
+    - Input: presentation_id (string), slide_index (int, 1-based) OR slide_id (string)
+
+    - Returns: structured description of all objects with positions
+
+    - For each object: type, id, position (x, y, width, height), content summary
+
+    - Include visual layout description (e.g., "title at top center, image on left")
+
+    - Include screenshot of slide as base64
+
+    '
+  tests:
+  - Tool accepts slide_index (1-based) or slide_id
+  - Returns structured object descriptions
+  - Position information is accurate
+  - Screenshot is included as base64
+  - Human-readable layout description is generated
+  - 'Command: go test ./internal/tools/... -run TestDescribeSlide passes'
+  passes: true
+- id: US-00017
+  title: Implement tool to add slide
+  priority: 4
+  description: 'MCP Tool: add_slide
+
+    Add a new slide to presentation:
+
+    - Input: presentation_id (string), position (int, 1-based, optional - default
+    end)
+
+    - Input: layout (string: BLANK, TITLE, TITLE_AND_BODY, TITLE_AND_TWO_COLUMNS,
+    etc.)
+
+    - Creates slide at specified position
+
+    - Returns: new slide index and slide_id
+
+    '
+  tests:
+  - Tool adds slide at specified position
+  - Default position is at end
+  - Layout types are correctly applied
+  - Returns new slide index and ID
+  - 'Command: go test ./internal/tools/... -run TestAddSlide passes'
+  passes: true
+- id: US-00018
+  title: Implement tool to delete slide
+  priority: 4
+  description: 'MCP Tool: delete_slide
+
+    Delete a slide from presentation:
+
+    - Input: presentation_id (string), slide_index (int, 1-based) OR slide_id (string)
+
+    - Deletes the specified slide
+
+    - Returns: confirmation with updated slide count
+
+    - Prevent deleting last slide (Slides requires at least one)
+
+    '
+  tests:
+  - Tool deletes slide by index or ID
+  - Slide count is updated after deletion
+  - Cannot delete last remaining slide
+  - Clear error message when trying to delete last slide
+  - 'Command: go test ./internal/tools/... -run TestDeleteSlide passes'
+  passes: true
+- id: US-00019
+  title: Implement tool to reorder slides
+  priority: 4
+  description: 'MCP Tool: reorder_slides
+
+    Move slides to new positions:
+
+    - Input: presentation_id (string), slide_indices (array of int, 1-based) OR slide_ids
+    (array)
+
+    - Input: insert_at (int, 1-based position to move slides to)
+
+    - Moves specified slides to new position
+
+    - Returns: new slide order with indices and IDs
+
+    '
+  tests:
+  - Tool moves single slide to new position
+  - Tool moves multiple slides together
+  - Returns updated slide order
+  - Handles edge cases (move to same position)
+  - 'Command: go test ./internal/tools/... -run TestReorderSlides passes'
+  passes: true
+- id: US-00020
+  title: Implement tool to duplicate slide
+  priority: 4
+  description: 'MCP Tool: duplicate_slide
+
+    Duplicate an existing slide:
+
+    - Input: presentation_id (string), slide_index (int) OR slide_id (string)
+
+    - Input: insert_at (int, optional - default after source slide)
+
+    - Creates exact copy of slide including all objects
+
+    - Returns: new slide index and ID
+
+    '
+  tests:
+  - Tool duplicates slide with all content
+  - Duplicate appears at specified position
+  - All objects are copied correctly
+  - Returns new slide index and ID
+  - 'Command: go test ./internal/tools/... -run TestDuplicateSlide passes'
+  passes: true
+- id: US-00021
+  title: Implement tool to list objects on slides
+  priority: 5
+  description: 'MCP Tool: list_objects
+
+    List all objects on slides with filtering:
+
+    - Input: presentation_id (string)
+
+    - Input: slide_indices (array of int, optional - default all slides)
+
+    - Input: object_types (array: SHAPE, IMAGE, TABLE, VIDEO, LINE, etc., optional)
+
+    - Returns: array of objects with {slide_index, object_id, type, position, size,
+    z_order}
+
+    - Include content preview for text objects (first 100 chars)
+
+    '
+  tests:
+  - Tool lists objects from all slides when no filter
+  - slide_indices filter works correctly
+  - object_types filter works correctly
+  - Position and size are accurate
+  - Content preview is included for text
+  - 'Command: go test ./internal/tools/... -run TestListObjects passes'
+  passes: true
+- id: US-00022
+  title: Implement tool to get object details
+  priority: 5
+  description: 'MCP Tool: get_object
+
+    Get detailed information about a specific object:
+
+    - Input: presentation_id (string), object_id (string)
+
+    - Returns: complete object properties based on type
+
+    - For shapes: text content, fill, outline, style
+
+    - For images: source URL, crop, brightness, contrast
+
+    - For tables: rows, columns, cell contents
+
+    - For videos: video ID, source, start/end times
+
+    '
+  tests:
+  - Tool returns complete details for shapes
+  - Tool returns complete details for images
+  - Tool returns complete details for tables
+  - Tool returns complete details for videos
+  - 'Command: go test ./internal/tools/... -run TestGetObject passes'
+  passes: true
+- id: US-00023
+  title: Implement tool to add text box
+  priority: 6
+  description: 'MCP Tool: add_text_box
+
+    Add a new text box to a slide:
+
+    - Input: presentation_id, slide_index OR slide_id, text (string)
+
+    - Input: position {x, y} in points, size {width, height} in points
+
+    - Input: style (optional): font_family, font_size, bold, italic, color
+
+    - Returns: object_id of created text box
+
+
+    Position notes for LLM: Standard slide is 720x405 points.
+
+    Top-left is (0,0). Values in EMUs internally but accept points.
+
+    '
+  tests:
+  - Tool creates text box at specified position
+  - Text content is correctly set
+  - Style options are applied
+  - Returns object_id
+  - Position uses points (converted to EMU internally)
+  - 'Command: go test ./internal/tools/... -run TestAddTextBox passes'
+  passes: true
+- id: US-00024
+  title: Implement tool to modify text in shape
+  priority: 6
+  description: 'MCP Tool: modify_text
+
+    Modify text content in existing shape:
+
+    - Input: presentation_id, object_id
+
+    - Input: action: ''replace'' | ''append'' | ''prepend'' | ''delete''
+
+    - Input: text (string, required for replace/append/prepend)
+
+    - Input: start_index, end_index (optional, for partial replacement)
+
+    - Returns: updated text content
+
+    '
+  tests:
+  - Replace action replaces all text
+  - Append adds text at end
+  - Prepend adds text at beginning
+  - Delete removes all text
+  - Partial replacement with indices works
+  - 'Command: go test ./internal/tools/... -run TestModifyText passes'
+  passes: true
+- id: US-00025
+  title: Implement tool to search text in presentation
+  priority: 6
+  description: 'MCP Tool: search_text
+
+    Search for text across presentation:
+
+    - Input: presentation_id, query (string), case_sensitive (bool, default false)
+
+    - Returns: array of matches with {slide_index, object_id, text_context, start_index}
+
+    - text_context includes surrounding text (50 chars before/after)
+
+    - Group results by slide for easy navigation
+
+    '
+  tests:
+  - Tool finds text matches across slides
+  - Case sensitivity option works
+  - Context is included in results
+  - Results are grouped by slide
+  - Returns start_index for each match
+  - 'Command: go test ./internal/tools/... -run TestSearchText passes'
+  passes: true
+- id: US-00026
+  title: Implement tool to replace text in presentation
+  priority: 6
+  description: 'MCP Tool: replace_text
+
+    Find and replace text across presentation:
+
+    - Input: presentation_id, find (string), replace_with (string)
+
+    - Input: case_sensitive (bool, default false)
+
+    - Input: scope: ''all'' | ''slide'' | ''object'' with corresponding IDs
+
+    - Returns: count of replacements made, list of affected objects
+
+    '
+  tests:
+  - Tool replaces all occurrences when scope is 'all'
+  - Scope 'slide' limits to specific slide
+  - Scope 'object' limits to specific object
+  - Case sensitivity works correctly
+  - Returns accurate replacement count
+  - 'Command: go test ./internal/tools/... -run TestReplaceText passes'
+  passes: true
+- id: US-00027
+  title: Implement tool to apply text styling
+  priority: 6
+  description: "MCP Tool: style_text\nApply styling to text in a shape:\n- Input:\
+    \ presentation_id, object_id\n- Input: start_index, end_index (optional, whole\
+    \ text if omitted)\n- Input: style object with any of:\n  - font_family (string)\n\
+    \  - font_size (int, points)\n  - bold (bool), italic (bool), underline (bool),\
+    \ strikethrough (bool)\n  - foreground_color (hex string, e.g., \"#FF0000\")\n\
+    \  - background_color (hex string)\n  - link_url (string, for hyperlinks)\n- Returns:\
+    \ confirmation with applied styles\n"
+  tests:
+  - Font family is applied
+  - Font size is applied (in points)
+  - Bold/italic/underline/strikethrough work
+  - Colors are applied (hex format)
+  - Partial styling with indices works
+  - Link URL creates hyperlink
+  - 'Command: go test ./internal/tools/... -run TestStyleText passes'
+  passes: true
+- id: US-00028
+  title: Implement tool to set paragraph formatting
+  priority: 6
+  description: "MCP Tool: format_paragraph\nSet paragraph formatting options:\n- Input:\
+    \ presentation_id, object_id\n- Input: paragraph_index (optional, all paragraphs\
+    \ if omitted)\n- Input: formatting object with any of:\n  - alignment: 'START'\
+    \ | 'CENTER' | 'END' | 'JUSTIFIED'\n  - line_spacing (percentage, e.g., 150 for\
+    \ 1.5 lines)\n  - space_above (points)\n  - space_below (points)\n  - indent_first_line\
+    \ (points)\n  - indent_start (points)\n  - indent_end (points)\n- Returns: confirmation\n"
+  tests:
+  - Alignment options work
+  - Line spacing is applied
+  - Space above/below work
+  - Indentation options work
+  - Paragraph index selection works
+  - 'Command: go test ./internal/tools/... -run TestFormatParagraph passes'
+  passes: true
+- id: US-00029
+  title: Implement tool to create bullet list
+  priority: 7
+  description: 'MCP Tool: create_bullet_list
+
+    Convert text to bullet list or add bullets:
+
+    - Input: presentation_id, object_id
+
+    - Input: paragraph_indices (array, optional - all if omitted)
+
+    - Input: bullet_style: ''DISC'' | ''CIRCLE'' | ''SQUARE'' | ''DIAMOND'' | ''ARROW''
+    | ''STAR''
+
+    - Input: bullet_color (hex string, optional)
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Tool creates bullet list from text
+  - Bullet style options work
+  - Bullet color is applied
+  - Specific paragraphs can be targeted
+  - 'Command: go test ./internal/tools/... -run TestCreateBulletList passes'
+  passes: true
+- id: US-00030
+  title: Implement tool to create numbered list
+  priority: 7
+  description: 'MCP Tool: create_numbered_list
+
+    Convert text to numbered list:
+
+    - Input: presentation_id, object_id
+
+    - Input: paragraph_indices (array, optional)
+
+    - Input: number_style: ''DECIMAL'' | ''ALPHA_UPPER'' | ''ALPHA_LOWER'' | ''ROMAN_UPPER''
+    | ''ROMAN_LOWER''
+
+    - Input: start_number (int, default 1)
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Tool creates numbered list
+  - Number style options work
+  - Start number is respected
+  - Specific paragraphs can be targeted
+  - 'Command: go test ./internal/tools/... -run TestCreateNumberedList passes'
+  passes: true
+- id: US-00031
+  title: Implement tool to modify list properties
+  priority: 7
+  description: 'MCP Tool: modify_list
+
+    Modify existing list properties or remove list:
+
+    - Input: presentation_id, object_id
+
+    - Input: action: ''modify'' | ''remove'' | ''increase_indent'' | ''decrease_indent''
+
+    - Input: paragraph_indices (array, optional)
+
+    - Input: properties (for modify): bullet_style, number_style, color, etc.
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Modify action updates list properties
+  - Remove action converts list back to plain text
+  - Indent actions change nesting level
+  - 'Command: go test ./internal/tools/... -run TestModifyList passes'
+  passes: false
+- id: US-00032
+  title: Implement tool to add image to slide
+  priority: 8
+  description: 'MCP Tool: add_image
+
+    Add an image to a slide:
+
+    - Input: presentation_id, slide_index OR slide_id
+
+    - Input: image_base64 (string, base64 encoded image data)
+
+    - Input: position {x, y} in points
+
+    - Input: size {width, height} in points (optional, preserve aspect ratio if only
+    one)
+
+    - Returns: object_id of created image
+
+
+    Note for LLM: Image is uploaded via Drive API first, then linked to slide.
+
+    '
+  tests:
+  - Tool adds image from base64 data
+  - Position is correctly applied
+  - Size is correctly applied
+  - Aspect ratio is preserved when only width or height specified
+  - Returns object_id
+  - 'Command: go test ./internal/tools/... -run TestAddImage passes'
+  passes: false
+- id: US-00033
+  title: Implement tool to modify image properties
+  priority: 8
+  description: "MCP Tool: modify_image\nModify image properties:\n- Input: presentation_id,\
+    \ object_id\n- Input: properties object with any of:\n  - position {x, y}\n  -\
+    \ size {width, height}\n  - crop {top, bottom, left, right} (percentage 0-1)\n\
+    \  - brightness (float, -1 to 1)\n  - contrast (float, -1 to 1)\n  - transparency\
+    \ (float, 0 to 1)\n  - recolor (preset name or none)\n- Returns: confirmation\n"
+  tests:
+  - Position modification works
+  - Size modification works
+  - Crop is applied correctly
+  - Brightness/contrast adjustments work
+  - Transparency is applied
+  - 'Command: go test ./internal/tools/... -run TestModifyImage passes'
+  passes: false
+- id: US-00034
+  title: Implement tool to replace image
+  priority: 8
+  description: 'MCP Tool: replace_image
+
+    Replace an existing image with new one:
+
+    - Input: presentation_id, object_id
+
+    - Input: image_base64 (string)
+
+    - Input: preserve_size (bool, default true)
+
+    - Replaces image content while optionally keeping size/position
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Tool replaces image content
+  - Size is preserved when preserve_size is true
+  - Position is preserved
+  - New image displays correctly
+  - 'Command: go test ./internal/tools/... -run TestReplaceImage passes'
+  passes: false
+- id: US-00035
+  title: Implement tool to create shape
+  priority: 9
+  description: "MCP Tool: create_shape\nCreate a shape on a slide:\n- Input: presentation_id,\
+    \ slide_index OR slide_id\n- Input: shape_type: 'RECTANGLE' | 'ELLIPSE' | 'ROUND_RECTANGLE'\
+    \ | 'TRIANGLE' |\n                     'ARROW_RIGHT' | 'ARROW_LEFT' | 'ARROW_UP'\
+    \ | 'ARROW_DOWN' |\n                     'STAR_5' | 'STAR_4' | 'PENTAGON' | 'HEXAGON'\
+    \ | etc.\n- Input: position {x, y}, size {width, height} in points\n- Input: fill_color\
+    \ (hex string, optional)\n- Input: outline_color, outline_weight (optional)\n\
+    - Returns: object_id\n"
+  tests:
+  - Tool creates various shape types
+  - Position and size are correct
+  - Fill color is applied
+  - Outline properties work
+  - Returns object_id
+  - 'Command: go test ./internal/tools/... -run TestCreateShape passes'
+  passes: false
+- id: US-00036
+  title: Implement tool to create line/arrow
+  priority: 9
+  description: 'MCP Tool: create_line
+
+    Create a line or arrow:
+
+    - Input: presentation_id, slide_index OR slide_id
+
+    - Input: start_point {x, y}, end_point {x, y} in points
+
+    - Input: line_type: ''STRAIGHT'' | ''CURVED'' | ''ELBOW''
+
+    - Input: start_arrow: ''NONE'' | ''ARROW'' | ''DIAMOND'' | ''OVAL'' | ''OPEN_ARROW''
+
+    - Input: end_arrow: same options
+
+    - Input: line_color (hex), line_weight (points)
+
+    - Input: line_dash: ''SOLID'' | ''DASH'' | ''DOT'' | ''DASH_DOT''
+
+    - Returns: object_id
+
+    '
+  tests:
+  - Tool creates lines between points
+  - Arrow styles work on both ends
+  - Line types work
+  - Color and weight are applied
+  - Dash patterns work
+  - 'Command: go test ./internal/tools/... -run TestCreateLine passes'
+  passes: false
+- id: US-00037
+  title: Implement tool to modify shape properties
+  priority: 9
+  description: "MCP Tool: modify_shape\nModify shape appearance:\n- Input: presentation_id,\
+    \ object_id\n- Input: properties object with any of:\n  - fill_color (hex string\
+    \ or 'transparent')\n  - outline_color (hex string or 'transparent')\n  - outline_weight\
+    \ (points)\n  - outline_dash ('SOLID' | 'DASH' | 'DOT' | 'DASH_DOT')\n  - shadow\
+    \ (bool or shadow config)\n  - reflection (bool or reflection config)\n- Returns:\
+    \ confirmation\n"
+  tests:
+  - Fill color modification works
+  - Transparent fill works
+  - Outline properties work
+  - Shadow can be added/removed
+  - Reflection can be added/removed
+  - 'Command: go test ./internal/tools/... -run TestModifyShape passes'
+  passes: false
+- id: US-00038
+  title: Implement tool to move/resize object
+  priority: 10
+  description: 'MCP Tool: transform_object
+
+    Move and/or resize any object:
+
+    - Input: presentation_id, object_id
+
+    - Input: position {x, y} (optional, in points)
+
+    - Input: size {width, height} (optional, in points)
+
+    - Input: rotation (optional, degrees 0-360)
+
+    - Input: scale_proportionally (bool, default true when only width or height given)
+
+    - Returns: new position, size, rotation
+
+    '
+  tests:
+  - Tool moves object to new position
+  - Tool resizes object
+  - Rotation is applied
+  - Proportional scaling works
+  - All values in points
+  - 'Command: go test ./internal/tools/... -run TestTransformObject passes'
+  passes: false
+- id: US-00039
+  title: Implement tool to change object z-order
+  priority: 10
+  description: 'MCP Tool: change_z_order
+
+    Change object layering (z-order):
+
+    - Input: presentation_id, object_id
+
+    - Input: action: ''bring_to_front'' | ''send_to_back'' | ''bring_forward'' | ''send_backward''
+
+    - Returns: new z-order position
+
+    '
+  tests:
+  - bring_to_front moves object to top
+  - send_to_back moves object to bottom
+  - bring_forward moves up one layer
+  - send_backward moves down one layer
+  - 'Command: go test ./internal/tools/... -run TestChangeZOrder passes'
+  passes: false
+- id: US-00040
+  title: Implement tool to group/ungroup objects
+  priority: 10
+  description: 'MCP Tool: group_objects
+
+    Group or ungroup objects:
+
+    - Input: presentation_id, action: ''group'' | ''ungroup''
+
+    - Input (group): object_ids (array of strings to group)
+
+    - Input (ungroup): object_id (group to ungroup)
+
+    - Returns: group object_id (for group) or array of object_ids (for ungroup)
+
+    '
+  tests:
+  - Tool groups multiple objects
+  - Tool ungroups a group
+  - Returns correct IDs
+  - Grouped objects move together
+  - 'Command: go test ./internal/tools/... -run TestGroupObjects passes'
+  passes: false
+- id: US-00041
+  title: Implement tool to delete object
+  priority: 10
+  description: 'MCP Tool: delete_object
+
+    Delete an object from a slide:
+
+    - Input: presentation_id, object_id
+
+    - Input: multiple (optional): array of object_ids for batch delete
+
+    - Returns: confirmation with count of deleted objects
+
+    '
+  tests:
+  - Tool deletes single object
+  - Tool deletes multiple objects in batch
+  - Deleted objects are removed from slide
+  - Returns accurate count
+  - 'Command: go test ./internal/tools/... -run TestDeleteObject passes'
+  passes: false
+- id: US-00042
+  title: Implement tool to create table
+  priority: 11
+  description: 'MCP Tool: create_table
+
+    Create a table on a slide:
+
+    - Input: presentation_id, slide_index OR slide_id
+
+    - Input: rows (int), columns (int)
+
+    - Input: position {x, y}, size {width, height} (optional, auto-sized if omitted)
+
+    - Input: initial_data (optional): 2D array of cell contents
+
+    - Returns: object_id, cell_ids array
+
+    '
+  tests:
+  - Tool creates table with specified dimensions
+  - Position and size are applied
+  - Initial data populates cells
+  - Returns object_id and cell structure
+  - 'Command: go test ./internal/tools/... -run TestCreateTable passes'
+  passes: false
+- id: US-00043
+  title: Implement tool to modify table structure
+  priority: 11
+  description: 'MCP Tool: modify_table_structure
+
+    Add/delete rows and columns:
+
+    - Input: presentation_id, object_id (table)
+
+    - Input: action: ''add_row'' | ''delete_row'' | ''add_column'' | ''delete_column''
+
+    - Input: index (int, where to add/which to delete, 0-based)
+
+    - Input: count (int, how many to add/delete, default 1)
+
+    - Returns: updated table dimensions
+
+    '
+  tests:
+  - Tool adds rows
+  - Tool deletes rows
+  - Tool adds columns
+  - Tool deletes columns
+  - Index positions are respected
+  - 'Command: go test ./internal/tools/... -run TestModifyTableStructure passes'
+  passes: false
+- id: US-00044
+  title: Implement tool to merge table cells
+  priority: 11
+  description: 'MCP Tool: merge_cells
+
+    Merge or unmerge table cells:
+
+    - Input: presentation_id, object_id (table)
+
+    - Input: action: ''merge'' | ''unmerge''
+
+    - Input (merge): start_row, start_column, end_row, end_column (0-based indices)
+
+    - Input (unmerge): row, column (position of merged cell to unmerge)
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Tool merges cells in specified range
+  - Tool unmerges previously merged cells
+  - Content from first cell is preserved on merge
+  - Unmerge distributes content to first cell only
+  - 'Command: go test ./internal/tools/... -run TestMergeCells passes'
+  passes: false
+- id: US-00045
+  title: Implement tool to modify table cell content
+  priority: 11
+  description: 'MCP Tool: modify_table_cell
+
+    Modify cell content and text styling:
+
+    - Input: presentation_id, object_id (table)
+
+    - Input: row, column (0-based indices)
+
+    - Input: text (string, optional - set cell text)
+
+    - Input: style (optional): font_family, font_size, bold, italic, color, etc.
+
+    - Input: alignment (optional): horizontal (''START''|''CENTER''|''END''), vertical
+    (''TOP''|''MIDDLE''|''BOTTOM'')
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Tool sets cell text content
+  - Text styling is applied
+  - Horizontal alignment works
+  - Vertical alignment works
+  - 'Command: go test ./internal/tools/... -run TestModifyTableCell passes'
+  passes: false
+- id: US-00046
+  title: Implement tool to style table cells
+  priority: 11
+  description: "MCP Tool: style_table_cells\nApply visual styling to cells:\n- Input:\
+    \ presentation_id, object_id (table)\n- Input: cells (array of {row, column} or\
+    \ 'all' or 'row:N' or 'column:N')\n- Input: style object:\n  - background_color\
+    \ (hex)\n  - border_top, border_bottom, border_left, border_right: {color, width,\
+    \ dash_style}\n- Returns: confirmation\n"
+  tests:
+  - Background color is applied to cells
+  - Border properties work (color, width)
+  - Selection by row/column works
+  - '''all'' applies to entire table'
+  - 'Command: go test ./internal/tools/... -run TestStyleTableCells passes'
+  passes: false
+- id: US-00047
+  title: Implement tool to add video to slide
+  priority: 12
+  description: 'MCP Tool: add_video
+
+    Add a video to a slide:
+
+    - Input: presentation_id, slide_index OR slide_id
+
+    - Input: video_source: ''youtube'' | ''drive''
+
+    - Input: video_id (YouTube video ID or Drive file ID)
+
+    - Input: position {x, y}, size {width, height} in points
+
+    - Input: start_time, end_time (optional, seconds)
+
+    - Input: autoplay (bool, default false)
+
+    - Input: mute (bool, default false)
+
+    - Returns: object_id
+
+    '
+  tests:
+  - Tool adds YouTube video
+  - Tool adds Drive video
+  - Position and size are applied
+  - Start/end times work for trimming
+  - Autoplay and mute settings work
+  - 'Command: go test ./internal/tools/... -run TestAddVideo passes'
+  passes: false
+- id: US-00048
+  title: Implement tool to modify video properties
+  priority: 12
+  description: "MCP Tool: modify_video\nModify video playback properties:\n- Input:\
+    \ presentation_id, object_id\n- Input: properties object with any of:\n  - start_time\
+    \ (seconds)\n  - end_time (seconds)\n  - autoplay (bool)\n  - mute (bool)\n  -\
+    \ position {x, y}\n  - size {width, height}\n- Returns: confirmation\n"
+  tests:
+  - Playback range (start/end) can be modified
+  - Autoplay setting can be changed
+  - Mute setting can be changed
+  - Position and size can be changed
+  - 'Command: go test ./internal/tools/... -run TestModifyVideo passes'
+  passes: false
+- id: US-00049
+  title: Implement tool to apply theme
+  priority: 13
+  description: 'MCP Tool: apply_theme
+
+    Apply a theme to the presentation:
+
+    - Input: presentation_id
+
+    - Input: theme_source: ''gallery'' | ''presentation''
+
+    - Input: theme_id (gallery theme ID) OR source_presentation_id
+
+    - Applies theme colors, fonts, backgrounds from source
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Tool applies theme from gallery
+  - Tool copies theme from another presentation
+  - Theme colors are updated
+  - Theme fonts are updated
+  - 'Command: go test ./internal/tools/... -run TestApplyTheme passes'
+  passes: false
+- id: US-00050
+  title: Implement tool to set slide background
+  priority: 13
+  description: 'MCP Tool: set_background
+
+    Set background for slide(s):
+
+    - Input: presentation_id
+
+    - Input: scope: ''slide'' | ''all'' with slide_index/slide_id for ''slide''
+
+    - Input: background_type: ''solid'' | ''image'' | ''gradient''
+
+    - Input (solid): color (hex)
+
+    - Input (image): image_base64
+
+    - Input (gradient): start_color, end_color, angle (degrees)
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Solid color background works
+  - Image background works
+  - Gradient background works
+  - Single slide scope works
+  - All slides scope works
+  - 'Command: go test ./internal/tools/... -run TestSetBackground passes'
+  passes: false
+- id: US-00051
+  title: Implement tool to configure slide footer
+  priority: 13
+  description: 'MCP Tool: configure_footer
+
+    Configure presentation footer (slide numbers, date, custom text):
+
+    - Input: presentation_id
+
+    - Input: show_slide_number (bool)
+
+    - Input: show_date (bool), date_format (optional)
+
+    - Input: footer_text (string, optional)
+
+    - Input: apply_to: ''all'' | ''title_slides_only'' | ''exclude_title_slides''
+
+    - Returns: confirmation
+
+    '
+  tests:
+  - Slide numbers can be enabled/disabled
+  - Date can be enabled with format
+  - Custom footer text is applied
+  - Apply_to options work correctly
+  - 'Command: go test ./internal/tools/... -run TestConfigureFooter passes'
+  passes: false
+- id: US-00052
+  title: Implement tool to set slide transition
+  priority: 14
+  description: "MCP Tool: set_transition\nSet transition effect for slide:\n- Input:\
+    \ presentation_id\n- Input: slide_index OR slide_id (optional, 'all' for all slides)\n\
+    - Input: transition_type: 'NONE' | 'FADE' | 'SLIDE_FROM_RIGHT' | 'SLIDE_FROM_LEFT'\
+    \ |\n         'SLIDE_FROM_TOP' | 'SLIDE_FROM_BOTTOM' | 'FLIP' | 'CUBE' | 'GALLERY'\
+    \ |\n         'ZOOM' | 'DISSOLVE' | etc.\n- Input: duration (seconds, e.g., 0.5)\n\
+    - Returns: confirmation\n"
+  tests:
+  - Tool sets transition on single slide
+  - Tool sets transition on all slides
+  - Different transition types work
+  - Duration is applied
+  - NONE removes transition
+  - 'Command: go test ./internal/tools/... -run TestSetTransition passes'
+  passes: false
+- id: US-00053
+  title: Implement tool to add object animation
+  priority: 15
+  description: "MCP Tool: add_animation\nAdd entrance/exit animation to object:\n\
+    - Input: presentation_id, object_id\n- Input: animation_type: 'APPEAR' | 'FADE_IN'\
+    \ | 'FLY_IN' | 'ZOOM_IN' |\n         'FADE_OUT' | 'FLY_OUT' | 'ZOOM_OUT' | 'SPIN'\
+    \ | 'FLOAT' | 'BOUNCE'\n- Input: animation_category: 'entrance' | 'exit' | 'emphasis'\n\
+    - Input: direction (for fly animations): 'FROM_LEFT' | 'FROM_RIGHT' | 'FROM_TOP'\
+    \ | 'FROM_BOTTOM'\n- Input: duration (seconds)\n- Input: delay (seconds, delay\
+    \ before animation starts)\n- Input: trigger: 'ON_CLICK' | 'AFTER_PREVIOUS' |\
+    \ 'WITH_PREVIOUS'\n- Returns: animation_id\n"
+  tests:
+  - Entrance animations work
+  - Exit animations work
+  - Emphasis animations work
+  - Direction options work
+  - Duration and delay are applied
+  - Trigger options work
+  - 'Command: go test ./internal/tools/... -run TestAddAnimation passes'
+  passes: false
+- id: US-00054
+  title: Implement tool to manage animation order
+  priority: 15
+  description: 'MCP Tool: manage_animations
+
+    Reorder, modify or remove animations:
+
+    - Input: presentation_id, slide_index OR slide_id
+
+    - Input: action: ''list'' | ''reorder'' | ''modify'' | ''delete''
+
+    - Input (list): returns all animations on slide in order
+
+    - Input (reorder): animation_ids (array in new order)
+
+    - Input (modify): animation_id, properties to update
+
+    - Input (delete): animation_id
+
+    - Returns: updated animation list or confirmation
+
+    '
+  tests:
+  - List returns all animations in order
+  - Reorder changes animation sequence
+  - Modify updates animation properties
+  - Delete removes animation
+  - 'Command: go test ./internal/tools/... -run TestManageAnimations passes'
+  passes: false
+- id: US-00055
+  title: Implement tool to manage speaker notes
+  priority: 16
+  description: 'MCP Tool: manage_speaker_notes
+
+    Get, set, or modify speaker notes:
+
+    - Input: presentation_id, slide_index OR slide_id
+
+    - Input: action: ''get'' | ''set'' | ''append'' | ''clear''
+
+    - Input (set/append): notes_text (string)
+
+    - Returns: current notes content
+
+    '
+  tests:
+  - Get returns current speaker notes
+  - Set replaces speaker notes
+  - Append adds to existing notes
+  - Clear removes all notes
+  - 'Command: go test ./internal/tools/... -run TestManageSpeakerNotes passes'
+  passes: false
+- id: US-00056
+  title: Implement tool to list comments
+  priority: 17
+  description: 'MCP Tool: list_comments
+
+    List all comments in presentation:
+
+    - Input: presentation_id
+
+    - Input: include_resolved (bool, default false)
+
+    - Returns: array of comments with {comment_id, author, content, anchor_info, replies,
+    resolved, created_time}
+
+    - Anchor_info indicates what the comment is attached to
+
+    '
+  tests:
+  - Tool lists all unresolved comments
+  - include_resolved shows resolved comments
+  - Replies are included
+  - Anchor information is provided
+  - 'Command: go test ./internal/tools/... -run TestListComments passes'
+  passes: false
+- id: US-00057
+  title: Implement tool to add comment
+  priority: 17
+  description: 'MCP Tool: add_comment
+
+    Add a comment to the presentation:
+
+    - Input: presentation_id
+
+    - Input: content (string, comment text)
+
+    - Input: anchor_object_id (optional, attach to specific object)
+
+    - Input: anchor_page_index (optional, attach to specific slide)
+
+    - Returns: comment_id
+
+    '
+  tests:
+  - Tool adds comment to presentation
+  - Comment can be anchored to object
+  - Comment can be anchored to slide
+  - Returns comment_id
+  - 'Command: go test ./internal/tools/... -run TestAddComment passes'
+  passes: false
+- id: US-00058
+  title: Implement tool to reply/resolve/delete comment
+  priority: 17
+  description: 'MCP Tool: manage_comment
+
+    Reply to, resolve, or delete a comment:
+
+    - Input: presentation_id, comment_id
+
+    - Input: action: ''reply'' | ''resolve'' | ''unresolve'' | ''delete''
+
+    - Input (reply): content (string)
+
+    - Returns: confirmation or reply_id
+
+    '
+  tests:
+  - Reply adds a reply to comment
+  - Resolve marks comment as resolved
+  - Unresolve reopens resolved comment
+  - Delete removes comment
+  - 'Command: go test ./internal/tools/... -run TestManageComment passes'
+  passes: false
+- id: US-00059
+  title: Implement tool to translate presentation
+  priority: 18
+  description: 'MCP Tool: translate_presentation
+
+    Translate all text in presentation using Google Translate API:
+
+    - Input: presentation_id
+
+    - Input: target_language (ISO 639-1 code, e.g., ''fr'', ''es'', ''de'', ''ja'')
+
+    - Input: source_language (optional, auto-detect if omitted)
+
+    - Input: scope: ''all'' | ''slide'' | ''object'' with corresponding IDs
+
+    - Translates in-place, preserving all formatting and structure
+
+    - Returns: count of text elements translated
+
+    '
+  tests:
+  - Tool translates all text in presentation
+  - Target language is correctly applied
+  - Source language auto-detection works
+  - Formatting is preserved after translation
+  - Scope options work correctly
+  - 'Command: go test ./internal/tools/... -run TestTranslatePresentation passes'
+  passes: false
+- id: US-00060
+  title: Implement tool to manage hyperlinks
+  priority: 19
+  description: 'MCP Tool: manage_hyperlinks
+
+    Create, list, or remove hyperlinks:
+
+    - Input: presentation_id
+
+    - Input: action: ''list'' | ''add'' | ''remove''
+
+    - Input (list): scope ''all'' | ''slide'' | ''object'' with IDs
+
+    - Input (add): object_id, start_index, end_index (for text), url
+
+    - Input (add): object_id (for shape/image), url
+
+    - Input (remove): object_id, start_index, end_index (for text link)
+
+    - Supports links to: external URLs, other slides (internal), other presentations
+
+    - Returns: list of links or confirmation
+
+    '
+  tests:
+  - List returns all hyperlinks with their URLs
+  - Add creates link on text range
+  - Add creates link on entire shape/image
+  - Remove clears link from text
+  - Internal slide links work
+  - 'Command: go test ./internal/tools/... -run TestManageHyperlinks passes'
+  passes: false
+- id: US-00061
+  title: Implement batch operations support
+  priority: 20
+  description: 'MCP Tool: batch_update
+
+    Execute multiple operations in a single API call:
+
+    - Input: presentation_id
+
+    - Input: operations (array of operation objects)
+
+    - Each operation has: tool_name, parameters
+
+    - Input: on_error: ''stop'' | ''continue'' | ''rollback''
+
+    - Returns: array of results for each operation
+
+    - Uses Google Slides batchUpdate API for efficiency
+
+    '
+  tests:
+  - Multiple operations execute in sequence
+  - on_error 'stop' halts on first error
+  - on_error 'continue' processes all operations
+  - on_error 'rollback' reverts on any error
+  - Results array matches operations array
+  - 'Command: go test ./internal/tools/... -run TestBatchUpdate passes'
+  passes: false
+- id: US-00062
+  title: Implement retry logic with exponential backoff
+  priority: 20
+  description: 'Implement automatic retry for transient failures:
+
+    - Retry on 429 (rate limit), 500, 503 errors
+
+    - Exponential backoff: 1s, 2s, 4s, 8s, 16s max
+
+    - Add jitter to prevent thundering herd
+
+    - Max 5 retries before failing
+
+    - Log retry attempts
+
+    - Configurable via environment variables
+
+    '
+  tests:
+  - 429 errors trigger retry
+  - 500/503 errors trigger retry
+  - Backoff intervals increase exponentially
+  - Max retries limit is respected
+  - Jitter is applied
+  - 'Command: go test ./internal/retry/... passes'
+  passes: false
+- id: US-00063
+  title: Implement caching layer
+  priority: 20
+  description: 'Implement caching for performance optimization:
+
+    - Cache document structure (object IDs, positions) with 5-min TTL
+
+    - Cache access tokens with expiry-aware TTL (typically 55 minutes)
+
+    - Cache permission checks with 5-min TTL
+
+    - In-memory cache with LRU eviction
+
+    - Cache invalidation on write operations
+
+    - Cache hit/miss metrics logging
+
+    '
+  tests:
+  - Document structure is cached
+  - Access tokens are cached
+  - Permission checks are cached
+  - Cache invalidation works on writes
+  - TTL expiration works
+  - LRU eviction prevents memory issues
+  - 'Command: go test ./internal/cache/... passes'
+  passes: false
+- id: US-00064
+  title: Create comprehensive README documentation
+  priority: 21
+  description: 'Complete README.md with:
+
+    - Project overview and features list
+
+    - Architecture diagram
+
+    - Authentication flow explanation
+
+    - All MCP tools with usage examples
+
+    - Deployment instructions
+
+    - Configuration options
+
+    - Troubleshooting guide
+
+    - API rate limits and quotas
+
+    '
+  tests:
+  - README.md exists with all sections
+  - All tools are documented with examples
+  - Deployment instructions are complete
+  - Architecture diagram is included
+  passes: false
+- id: US-00065
+  title: Create CLAUDE.md development guidelines
+  priority: 21
+  description: 'Create CLAUDE.md with:
+
+    - Project structure explanation
+
+    - Development commands
+
+    - Testing guidelines
+
+    - Code style and conventions
+
+    - Common patterns used
+
+    - Debugging tips
+
+    - Contribution guidelines
+
+    '
+  tests:
+  - CLAUDE.md exists with all sections
+  - Development commands are accurate
+  - Testing guidelines are clear
+  passes: false
+- id: US-00066
+  title: Implement integration tests
+  priority: 21
+  description: 'Create integration tests for end-to-end functionality:
+
+    - Test authentication flow
+
+    - Test presentation CRUD operations
+
+    - Test slide operations
+
+    - Test object operations
+
+    - Test with real Google Slides API (in test mode)
+
+    - Use test fixtures and cleanup
+
+    '
+  tests:
+  - Integration tests exist for auth flow
+  - Integration tests exist for main operations
+  - Test cleanup removes test artifacts
+  - 'Command: make test-integration succeeds (when creds available)'
+  passes: false
+

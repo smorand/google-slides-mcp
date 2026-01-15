@@ -1890,6 +1890,88 @@ output, err := tools.CreateBulletList(ctx, tokenSource, tools.CreateBulletListIn
 fmt.Printf("Applied: %s, Scope: %s\n", output.BulletPreset, output.ParagraphScope)
 ```
 
+### create_numbered_list Tool (`create_numbered_list.go`)
+Converts text to a numbered list or adds numbering to existing text.
+
+**Input:**
+```go
+tools.CreateNumberedListInput{
+    PresentationID:   "presentation-id",  // Required
+    ObjectID:         "object-id",        // Required - ID of shape containing text
+    ParagraphIndices: []int{0, 2},        // Optional - apply to specific paragraphs (0-based), all if omitted
+    NumberStyle:      "DECIMAL",          // Required - number style
+    StartNumber:      1,                  // Optional - starting number (default 1)
+}
+```
+
+**Number Styles:**
+| User-Friendly Name | API Preset |
+|--------------------|------------|
+| `DECIMAL` | NUMBERED_DECIMAL_ALPHA_ROMAN |
+| `ALPHA_UPPER` | NUMBERED_UPPERALPHA_ALPHA_ROMAN |
+| `ALPHA_LOWER` | NUMBERED_ALPHA_ALPHA_ROMAN |
+| `ROMAN_UPPER` | NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL |
+| `ROMAN_LOWER` | NUMBERED_ROMAN_UPPERALPHA_DECIMAL |
+
+Full preset names are also accepted (e.g., `NUMBERED_DECIMAL_NESTED`, `NUMBERED_DECIMAL_ALPHA_ROMAN_PARENS`).
+
+**Output:**
+```go
+tools.CreateNumberedListOutput{
+    ObjectID:       "object-id",                    // The modified object's ID
+    NumberPreset:   "NUMBERED_DECIMAL_ALPHA_ROMAN", // The actual preset applied
+    ParagraphScope: "ALL",                          // "ALL" or "INDICES [0, 2]"
+    StartNumber:    1,                              // The start number applied
+}
+```
+
+**Features:**
+- Apply numbering to all paragraphs or specific paragraphs by index
+- Number style names are case-insensitive (normalized to uppercase)
+- Supports both user-friendly names (DECIMAL, ROMAN_UPPER) and full API preset names
+- Start number is stored but API creates list starting from 1 (limitation)
+
+**Sentinel Errors:**
+```go
+tools.ErrCreateNumberedListFailed // Generic numbered list creation failure
+tools.ErrInvalidNumberStyle       // Invalid or empty number style
+tools.ErrInvalidStartNumber       // Start number less than 1
+tools.ErrInvalidParagraphIndex    // Paragraph index negative or out of range
+tools.ErrNotTextObject            // Object does not contain text (tables must be done cell by cell)
+tools.ErrObjectNotFound           // Object not found in presentation
+tools.ErrInvalidPresentationID    // Empty presentation ID
+tools.ErrPresentationNotFound     // Presentation not found
+tools.ErrAccessDenied             // No permission to modify
+tools.ErrSlidesAPIError           // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Apply decimal numbering to all paragraphs
+output, err := tools.CreateNumberedList(ctx, tokenSource, tools.CreateNumberedListInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    NumberStyle:    "DECIMAL",
+})
+
+// Apply uppercase roman numerals
+output, err := tools.CreateNumberedList(ctx, tokenSource, tools.CreateNumberedListInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    NumberStyle:    "ROMAN_UPPER",
+})
+
+// Apply numbering to specific paragraphs only
+output, err := tools.CreateNumberedList(ctx, tokenSource, tools.CreateNumberedListInput{
+    PresentationID:   "abc123",
+    ObjectID:         "shape-xyz",
+    ParagraphIndices: []int{0, 2, 4},  // First, third, and fifth paragraphs
+    NumberStyle:      "ALPHA_LOWER",
+})
+
+fmt.Printf("Applied: %s, Scope: %s\n", output.NumberPreset, output.ParagraphScope)
+```
+
 ### search_text Tool (`search_text.go`)
 Searches for text across all slides in a presentation.
 
