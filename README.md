@@ -1174,6 +1174,146 @@ Duplicate last slide to the end:
 
 ---
 
+#### `list_objects`
+
+List all objects on slides with optional filtering by slide indices and object types.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz"
+}
+```
+
+With filters:
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_indices": [1, 3],
+  "object_types": ["IMAGE", "VIDEO"]
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_indices` | integer[] | No | 1-based slide indices to include (default: all slides) |
+| `object_types` | string[] | No | Object types to include (default: all types) |
+
+**Supported Object Types:**
+- `TEXT_BOX`, `RECTANGLE`, `ELLIPSE`, `TRIANGLE`, etc. (shapes)
+- `IMAGE`, `VIDEO`, `TABLE`, `LINE`
+- `GROUP`, `SHEETS_CHART`, `WORD_ART`
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "objects": [
+    {
+      "slide_index": 1,
+      "object_id": "g123456789",
+      "object_type": "TEXT_BOX",
+      "position": {"x": 100, "y": 50},
+      "size": {"width": 300, "height": 100},
+      "z_order": 0,
+      "content_preview": "Hello World"
+    },
+    {
+      "slide_index": 1,
+      "object_id": "g987654321",
+      "object_type": "IMAGE",
+      "position": {"x": 400, "y": 150},
+      "size": {"width": 200, "height": 200},
+      "z_order": 1,
+      "content_preview": ""
+    }
+  ],
+  "total_count": 2,
+  "filtered_by": {
+    "slide_indices": [1],
+    "object_types": ["TEXT_BOX", "IMAGE"]
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `presentation_id` | string | The presentation ID |
+| `objects` | array | Array of object listings |
+| `total_count` | integer | Total number of objects returned |
+| `filtered_by` | object | Filters applied (only if filters were specified) |
+
+**Object Listing Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `slide_index` | integer | 1-based slide index containing the object |
+| `object_id` | string | Unique object identifier |
+| `object_type` | string | Type of the object (TEXT_BOX, IMAGE, etc.) |
+| `position` | object | Object position in points {x, y} |
+| `size` | object | Object dimensions in points {width, height} |
+| `z_order` | integer | Layering position (lower = further back) |
+| `content_preview` | string | First 100 characters of text content (for text objects) |
+
+**Features:**
+- Lists objects from all slides when no filters applied
+- Filter by slide indices (1-based) to limit scope
+- Filter by object types to find specific elements
+- Position and size in points (standard slide: 720x405 points)
+- Content preview for shapes with text (first 100 characters)
+- Z-order indicates stacking order on the slide
+- Recursively includes objects within groups
+
+**Use Cases:**
+- Inventory all objects in a presentation
+- Find all images for replacement
+- Locate videos for playback configuration
+- Identify text boxes for bulk text operations
+- Count object types for analysis
+
+**Examples:**
+
+List all objects in a presentation:
+```json
+{
+  "presentation_id": "abc123"
+}
+```
+
+List only images and videos:
+```json
+{
+  "presentation_id": "abc123",
+  "object_types": ["IMAGE", "VIDEO"]
+}
+```
+
+List objects from specific slides:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_indices": [1, 3, 5]
+}
+```
+
+Combined filter - images from first slide only:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_indices": [1],
+  "object_types": ["IMAGE"]
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to access
+- `slides API error` - API error occurred
+
+---
+
 *More tools to be documented:*
 
 ### Content Manipulation

@@ -1194,6 +1194,83 @@ output, err := tools.DuplicateSlide(ctx, tokenSource, tools.DuplicateSlideInput{
 fmt.Printf("New slide: index=%d, id=%s\n", output.SlideIndex, output.SlideID)
 ```
 
+### list_objects Tool (`list_objects.go`)
+Lists all objects on slides with optional filtering.
+
+**Input:**
+```go
+tools.ListObjectsInput{
+    PresentationID: "presentation-id",           // Required
+    SlideIndices:   []int{1, 3},                 // Optional - 1-based indices, default all slides
+    ObjectTypes:    []string{"IMAGE", "VIDEO"},  // Optional - filter by type
+}
+```
+
+**Output:**
+```go
+tools.ListObjectsOutput{
+    PresentationID: "presentation-id",
+    Objects:        []ObjectListing{...},
+    TotalCount:     15,
+    FilteredBy:     &FilterInfo{...},  // Present only if filters applied
+}
+
+// Each object listing contains:
+tools.ObjectListing{
+    SlideIndex:     1,                  // 1-based slide index
+    ObjectID:       "shape-123",
+    ObjectType:     "TEXT_BOX",
+    Position:       &Position{X: 100, Y: 50},
+    Size:           &Size{Width: 300, Height: 100},
+    ZOrder:         0,                  // Lower = further back
+    ContentPreview: "First 100 chars...",  // For text objects
+}
+```
+
+**Supported Object Types:**
+- `TEXT_BOX`, `RECTANGLE`, `ELLIPSE`, etc. (shapes)
+- `IMAGE`, `VIDEO`, `TABLE`, `LINE`
+- `GROUP`, `SHEETS_CHART`, `WORD_ART`
+
+**Features:**
+- Lists objects from all slides when no filters applied
+- `slide_indices` filter limits to specific slides (1-based)
+- `object_types` filter limits to specific object types
+- Position and size returned in points (converted from EMU)
+- Content preview for text objects (first 100 characters)
+- Z-order indicates layering position (lower = further back)
+- Recursively includes objects within groups
+
+**Sentinel Errors:**
+```go
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to access
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// List all objects
+output, err := tools.ListObjects(ctx, tokenSource, tools.ListObjectsInput{
+    PresentationID: "abc123",
+})
+
+// List only images and videos from slides 1 and 3
+output, err := tools.ListObjects(ctx, tokenSource, tools.ListObjectsInput{
+    PresentationID: "abc123",
+    SlideIndices:   []int{1, 3},
+    ObjectTypes:    []string{"IMAGE", "VIDEO"},
+})
+
+// Process results
+for _, obj := range output.Objects {
+    fmt.Printf("Slide %d: %s (%s) at (%f, %f)\n",
+        obj.SlideIndex, obj.ObjectID, obj.ObjectType,
+        obj.Position.X, obj.Position.Y)
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
