@@ -2559,6 +2559,212 @@ if output.NewObjectID != "" {
 }
 ```
 
+### create_shape Tool (`create_shape.go`)
+Creates a shape on a slide with optional fill and outline styling.
+
+**Input:**
+```go
+tools.CreateShapeInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    ShapeType:      "RECTANGLE",        // Required - shape type
+    Position:       &PositionInput{X: 100, Y: 50},   // Position in points (default: 0, 0)
+    Size:           &SizeInput{Width: 300, Height: 100},  // Required - size in points
+    FillColor:      "#FF0000",          // Optional - hex color or "transparent"
+    OutlineColor:   "#0000FF",          // Optional - hex color or "transparent"
+    OutlineWeight:  &weight,            // Optional - weight in points
+}
+```
+
+**Output:**
+```go
+tools.CreateShapeOutput{
+    ObjectID: "shape_1234567890",  // Unique ID of the created shape
+}
+```
+
+**Supported Shape Types:**
+
+| Category | Shape Types |
+|----------|-------------|
+| Basic | RECTANGLE, ROUND_RECTANGLE, ELLIPSE, TRIANGLE, DIAMOND, PENTAGON, HEXAGON, HEPTAGON, OCTAGON, DECAGON, DODECAGON, PARALLELOGRAM, TRAPEZOID |
+| Stars | STAR_4, STAR_5, STAR_6, STAR_7, STAR_8, STAR_10, STAR_12, STAR_16, STAR_24, STAR_32 |
+| Arrows | ARROW_RIGHT, ARROW_LEFT, ARROW_UP, ARROW_DOWN, ARROW_LEFT_RIGHT, ARROW_UP_DOWN, CHEVRON, HOME_PLATE, NOTCHED_RIGHT_ARROW, BENT_ARROW, U_TURN_ARROW, CURVED_RIGHT_ARROW, CURVED_LEFT_ARROW, CURVED_UP_ARROW, CURVED_DOWN_ARROW, STRIPED_RIGHT_ARROW |
+| Callouts | RECTANGULAR_CALLOUT, ROUNDED_RECTANGULAR_CALLOUT, ELLIPTICAL_CALLOUT, WEDGE_RECTANGLE_CALLOUT, WEDGE_ROUND_RECT_CALLOUT, WEDGE_ELLIPSE_CALLOUT, CLOUD_CALLOUT |
+| Flowcharts | FLOWCHART_PROCESS, FLOWCHART_DECISION, FLOWCHART_INPUT_OUTPUT, FLOWCHART_TERMINATOR, FLOWCHART_DOCUMENT, FLOWCHART_CONNECTOR, etc. |
+| Equation | PLUS, MINUS, MULTIPLY, DIVIDE, EQUAL, NOT_EQUAL |
+| Block | CUBE, CAN, BEVEL, FOLDED_CORNER, SMILEY_FACE, DONUT, HEART, LIGHTNING_BOLT, SUN, MOON, CLOUD, ARC, PLAQUE, FRAME, CROSS, etc. |
+| Brackets | LEFT_BRACKET, RIGHT_BRACKET, LEFT_BRACE, RIGHT_BRACE, BRACKET_PAIR, BRACE_PAIR |
+
+**Features:**
+- Shape type names are case-insensitive (normalized to uppercase)
+- Position defaults to (0, 0) if not specified
+- Size is required with positive width and height
+- Fill color can be hex string (#RRGGBB) or "transparent"
+- Outline color can be hex string or "transparent"
+- Uses CreateShapeRequest followed by UpdateShapePropertiesRequest for styling
+- 1 point = 12700 EMU (English Metric Units)
+
+**Sentinel Errors:**
+```go
+tools.ErrCreateShapeFailed      // Generic shape creation failure
+tools.ErrInvalidShapeType       // Empty or unsupported shape type
+tools.ErrInvalidSize            // Size is required with positive width and height
+tools.ErrInvalidOutlineWeight   // Outline weight must be positive
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Create basic rectangle
+output, err := tools.CreateShape(ctx, tokenSource, tools.CreateShapeInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    ShapeType:      "RECTANGLE",
+    Position:       &tools.PositionInput{X: 100, Y: 50},
+    Size:           &tools.SizeInput{Width: 300, Height: 100},
+})
+
+// Create star with fill color
+output, err := tools.CreateShape(ctx, tokenSource, tools.CreateShapeInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+    ShapeType:      "STAR_5",
+    Position:       &tools.PositionInput{X: 200, Y: 150},
+    Size:           &tools.SizeInput{Width: 150, Height: 150},
+    FillColor:      "#FFD700",  // Gold fill
+})
+
+// Create arrow with fill and outline
+weight := 2.0
+output, err := tools.CreateShape(ctx, tokenSource, tools.CreateShapeInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    ShapeType:      "ARROW_RIGHT",
+    Position:       &tools.PositionInput{X: 50, Y: 300},
+    Size:           &tools.SizeInput{Width: 200, Height: 80},
+    FillColor:      "#4CAF50",  // Green fill
+    OutlineColor:   "#2E7D32",  // Darker green outline
+    OutlineWeight:  &weight,
+})
+
+// Create transparent shape with outline only
+output, err := tools.CreateShape(ctx, tokenSource, tools.CreateShapeInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    ShapeType:      "ELLIPSE",
+    Position:       &tools.PositionInput{X: 100, Y: 100},
+    Size:           &tools.SizeInput{Width: 200, Height: 200},
+    FillColor:      "transparent",
+    OutlineColor:   "#FF0000",
+    OutlineWeight:  &weight,
+})
+
+fmt.Printf("Created shape: %s\n", output.ObjectID)
+```
+
+### create_line Tool (`create_line.go`)
+Creates a line or arrow on a slide.
+
+**Input:**
+```go
+tools.CreateLineInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    StartPoint:     &Point{X: 10, Y: 10}, // Required - start coordinates in points
+    EndPoint:       &Point{X: 100, Y: 100}, // Required - end coordinates in points
+    LineType:       "STRAIGHT",         // Optional: "STRAIGHT", "CURVED", "ELBOW"
+    StartArrow:     "NONE",             // Optional: "NONE", "ARROW", "DIAMOND", "OVAL", "OPEN_ARROW", etc.
+    EndArrow:       "ARROW",            // Optional
+    LineColor:      "#FF0000",          // Optional - hex color
+    LineWeight:     2.0,                // Optional - weight in points
+    LineDash:       "SOLID",            // Optional: "SOLID", "DASH", "DOT", "DASH_DOT"
+}
+```
+
+**Output:**
+```go
+tools.CreateLineOutput{
+    ObjectID: "line_1234567890",  // Unique ID of the created line
+}
+```
+
+**Line Types:**
+- `STRAIGHT` - Straight line connection
+- `CURVED` - Curved line (simple curve)
+- `ELBOW` / `BENT` - Angled line (connector)
+
+**Arrow Styles:**
+- `NONE` - No arrow head
+- `ARROW` / `FILL_ARROW` - Filled triangle arrow
+- `DIAMOND` / `FILL_DIAMOND` - Filled diamond
+- `OVAL` / `CIRCLE` / `FILL_CIRCLE` - Filled circle
+- `OPEN_ARROW` - Open arrow head
+- `OPEN_CIRCLE` - Open circle
+- `OPEN_DIAMOND` - Open diamond
+- `STEALTH_ARROW` - Narrower filled arrow
+
+**Features:**
+- Handles start/end point calculation to correctly orient the line
+- Supports "anti-diagonal" lines (bottom-left to top-right) via flip transforms
+- Maps user-friendly arrow/line type names to API constants
+- Applies styling (color, weight, dash, arrows) via UpdateLinePropertiesRequest
+
+**Sentinel Errors:**
+```go
+tools.ErrCreateLineFailed       // Generic line creation failure
+tools.ErrInvalidPoints          // StartPoint or EndPoint missing
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Create simple straight line
+output, err := tools.CreateLine(ctx, tokenSource, tools.CreateLineInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    StartPoint:     &tools.Point{X: 100, Y: 100},
+    EndPoint:       &tools.Point{X: 300, Y: 100},
+})
+
+// Create arrow (line with arrow head)
+output, err := tools.CreateLine(ctx, tokenSource, tools.CreateLineInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    StartPoint:     &tools.Point{X: 50, Y: 200},
+    EndPoint:       &tools.Point{X: 250, Y: 200},
+    EndArrow:       "ARROW",
+    LineWeight:     3.0,
+    LineColor:      "#0000FF",
+})
+
+// Create curved connector with arrows at both ends
+output, err := tools.CreateLine(ctx, tokenSource, tools.CreateLineInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    StartPoint:     &tools.Point{X: 100, Y: 300},
+    EndPoint:       &tools.Point{X: 300, Y: 400},
+    LineType:       "CURVED",
+    StartArrow:     "OVAL",
+    EndArrow:       "ARROW",
+    LineDash:       "DOT",
+})
+
+fmt.Printf("Created line: %s\n", output.ObjectID)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

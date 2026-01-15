@@ -2941,8 +2941,266 @@ Replace image using new image's natural size:
 
 ---
 
-- `create_shape` - Add shapes
-- `create_line` - Draw lines and arrows
+#### `create_shape`
+
+Create a shape on a slide with optional fill and outline styling.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 1,
+  "shape_type": "RECTANGLE",
+  "position": {"x": 100, "y": 50},
+  "size": {"width": 200, "height": 100},
+  "fill_color": "#007FFF",
+  "outline_color": "#000000",
+  "outline_weight": 2
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No* | 1-based index of the target slide |
+| `slide_id` | string | No* | Object ID of the target slide |
+| `shape_type` | string | Yes | Shape type (RECTANGLE, ELLIPSE, etc.) |
+| `position` | object | No | Position in points (default: 0, 0) |
+| `position.x` | number | No | X coordinate in points from left edge |
+| `position.y` | number | No | Y coordinate in points from top edge |
+| `size` | object | Yes | Size in points |
+| `size.width` | number | Yes | Width in points (must be positive) |
+| `size.height` | number | Yes | Height in points (must be positive) |
+| `fill_color` | string | No | Fill color as hex string (#RRGGBB) or "transparent" |
+| `outline_color` | string | No | Outline color as hex string (#RRGGBB) or "transparent" |
+| `outline_weight` | number | No | Outline weight in points (must be positive) |
+
+*Either `slide_index` or `slide_id` must be provided.
+
+**Output:**
+```json
+{
+  "object_id": "shape_1234567890123456"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | Unique identifier of the created shape |
+
+**Supported Shape Types:**
+
+| Category | Shape Types |
+|----------|-------------|
+| Basic | `RECTANGLE`, `ROUND_RECTANGLE`, `ELLIPSE`, `TRIANGLE`, `DIAMOND`, `PENTAGON`, `HEXAGON`, `HEPTAGON`, `OCTAGON`, `DECAGON`, `DODECAGON`, `PARALLELOGRAM`, `TRAPEZOID` |
+| Stars | `STAR_4`, `STAR_5`, `STAR_6`, `STAR_7`, `STAR_8`, `STAR_10`, `STAR_12`, `STAR_16`, `STAR_24`, `STAR_32` |
+| Arrows | `ARROW_RIGHT`, `ARROW_LEFT`, `ARROW_UP`, `ARROW_DOWN`, `ARROW_LEFT_RIGHT`, `ARROW_UP_DOWN`, `NOTCHED_RIGHT_ARROW`, `BENT_ARROW`, `U_TURN_ARROW`, `CURVED_RIGHT_ARROW`, `CURVED_LEFT_ARROW`, `CURVED_UP_ARROW`, `CURVED_DOWN_ARROW`, `STRIPED_RIGHT_ARROW`, `CHEVRON`, `HOME_PLATE` |
+| Callouts | `RECTANGULAR_CALLOUT`, `ROUNDED_RECTANGULAR_CALLOUT`, `ELLIPTICAL_CALLOUT`, `WEDGE_RECTANGLE_CALLOUT`, `WEDGE_ROUND_RECT_CALLOUT`, `WEDGE_ELLIPSE_CALLOUT`, `CLOUD_CALLOUT` |
+| Flowchart | `FLOWCHART_PROCESS`, `FLOWCHART_DECISION`, `FLOWCHART_INPUT_OUTPUT`, `FLOWCHART_PREDEFINED_PROCESS`, `FLOWCHART_INTERNAL_STORAGE`, `FLOWCHART_DOCUMENT`, `FLOWCHART_MULTIDOCUMENT`, `FLOWCHART_TERMINATOR`, `FLOWCHART_PREPARATION`, `FLOWCHART_MANUAL_INPUT`, `FLOWCHART_MANUAL_OPERATION`, `FLOWCHART_CONNECTOR`, `FLOWCHART_PUNCHED_CARD`, `FLOWCHART_PUNCHED_TAPE`, `FLOWCHART_SUMMING_JUNCTION`, `FLOWCHART_OR`, `FLOWCHART_COLLATE`, `FLOWCHART_SORT`, `FLOWCHART_EXTRACT`, `FLOWCHART_MERGE`, `FLOWCHART_OFFLINE_STORAGE`, `FLOWCHART_ONLINE_STORAGE`, `FLOWCHART_MAGNETIC_TAPE`, `FLOWCHART_MAGNETIC_DISK`, `FLOWCHART_MAGNETIC_DRUM`, `FLOWCHART_DISPLAY`, `FLOWCHART_DELAY`, `FLOWCHART_ALTERNATE_PROCESS`, `FLOWCHART_DATA` |
+| Equation | `PLUS`, `MINUS`, `MULTIPLY`, `DIVIDE`, `EQUAL`, `NOT_EQUAL` |
+| Block | `CUBE`, `CAN`, `BEVEL`, `FOLDED_CORNER`, `SMILEY_FACE`, `DONUT`, `NO_SMOKING`, `BLOCK_ARC`, `HEART`, `LIGHTNING_BOLT`, `SUN`, `MOON`, `CLOUD`, `ARC`, `PLAQUE`, `FRAME`, `HALF_FRAME`, `CORNER`, `DIAGONAL_STRIPE`, `CHORD`, `PIE`, `L_SHAPE`, `CORNER_RIBBON`, `RIBBON`, `RIBBON_2`, `WAVE`, `DOUBLE_WAVE`, `CROSS`, `IRREGULAR_SEAL_1`, `IRREGULAR_SEAL_2`, `TEARDROP` |
+| Rectangles | `SNIP_1_RECTANGLE`, `SNIP_2_SAME_RECTANGLE`, `SNIP_2_DIAGONAL_RECTANGLE`, `SNIP_ROUND_RECTANGLE`, `ROUND_1_RECTANGLE`, `ROUND_2_SAME_RECTANGLE`, `ROUND_2_DIAGONAL_RECTANGLE` |
+| Brackets | `LEFT_BRACKET`, `RIGHT_BRACKET`, `LEFT_BRACE`, `RIGHT_BRACE`, `LEFT_RIGHT_BRACKET`, `BRACKET_PAIR`, `BRACE_PAIR` |
+
+**Features:**
+- Uses either 1-based slide index or slide ID for flexibility
+- Shape type names are case-insensitive (normalized to uppercase)
+- Position defaults to (0, 0) if not specified
+- Fill color supports hex colors or "transparent" for no fill
+- Outline color supports hex colors or "transparent" for no outline
+- Outline weight specifies the border thickness in points
+- Standard slide dimensions: 720x405 points
+- 1 point = 12700 EMU (English Metric Units)
+
+**Use Cases:**
+- Creating diagrams and flowcharts
+- Adding decorative shapes to slides
+- Building organizational charts
+- Creating callout annotations
+- Drawing process flows
+
+**Examples:**
+
+Create a simple rectangle:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "shape_type": "RECTANGLE",
+  "position": {"x": 100, "y": 100},
+  "size": {"width": 200, "height": 100}
+}
+```
+
+Create a star with fill color:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_id": "g123456",
+  "shape_type": "STAR_5",
+  "position": {"x": 300, "y": 150},
+  "size": {"width": 100, "height": 100},
+  "fill_color": "#FFD700"
+}
+```
+
+Create an arrow with outline:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 2,
+  "shape_type": "ARROW_RIGHT",
+  "position": {"x": 50, "y": 200},
+  "size": {"width": 150, "height": 50},
+  "fill_color": "#007FFF",
+  "outline_color": "#000000",
+  "outline_weight": 2
+}
+```
+
+Create a transparent shape with border only:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "shape_type": "ELLIPSE",
+  "position": {"x": 200, "y": 100},
+  "size": {"width": 150, "height": 150},
+  "fill_color": "transparent",
+  "outline_color": "#FF0000",
+  "outline_weight": 3
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid slide reference: either slide_index or slide_id is required` - Neither slide reference provided
+- `invalid shape type: shape_type is required` - Missing shape type
+- `invalid shape type: 'X' is not a valid shape type` - Unsupported shape type
+- `invalid size: size is required with positive width and height` - Missing or invalid size
+- `outline weight must be positive` - Outline weight ≤ 0
+- `slide not found` - Slide index out of range or slide ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to create shape` - API error during shape creation
+
+---
+
+#### `create_line`
+
+Create a line or arrow on a slide.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 1,
+  "start_point": {"x": 10, "y": 10},
+  "end_point": {"x": 100, "y": 100},
+  "line_type": "STRAIGHT",
+  "start_arrow": "NONE",
+  "end_arrow": "ARROW",
+  "line_color": "#FF0000",
+  "line_weight": 2
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No* | 1-based index of the target slide |
+| `slide_id` | string | No* | Object ID of the target slide |
+| `start_point` | object | Yes | Start coordinates in points {x, y} |
+| `end_point` | object | Yes | End coordinates in points {x, y} |
+| `line_type` | string | No | Line type (STRAIGHT, CURVED, ELBOW) |
+| `start_arrow` | string | No | Arrow style at start (NONE, ARROW, etc.) |
+| `end_arrow` | string | No | Arrow style at end (NONE, ARROW, etc.) |
+| `line_color` | string | No | Line color hex string |
+| `line_weight` | number | No | Line weight in points |
+| `line_dash` | string | No | Dash style (SOLID, DASH, DOT, etc.) |
+
+*Either `slide_index` or `slide_id` must be provided.
+
+**Output:**
+```json
+{
+  "object_id": "line_1234567890"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | Unique identifier of the created line |
+
+**Line Types:**
+- `STRAIGHT` - Straight line connection
+- `CURVED` - Simple curved line
+- `ELBOW` - Angled connector line
+
+**Arrow Styles:**
+- `NONE` - No arrow head
+- `ARROW` / `FILL_ARROW` - Filled triangle arrow
+- `DIAMOND` / `FILL_DIAMOND` - Filled diamond
+- `OVAL` / `CIRCLE` / `FILL_CIRCLE` - Filled circle
+- `OPEN_ARROW` - Open arrow head
+- `OPEN_CIRCLE` - Open circle
+- `OPEN_DIAMOND` - Open diamond
+- `STEALTH_ARROW` - Narrow filled arrow
+
+**Features:**
+- Handles start/end point geometry automatically
+- Supports lines in any direction (including anti-diagonal)
+- Applies styling and arrow heads in a single operation
+- Maps user-friendly names to API constants
+
+**Examples:**
+
+Create a simple line:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "start_point": {"x": 100, "y": 100},
+  "end_point": {"x": 300, "y": 100}
+}
+```
+
+Create an arrow:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "start_point": {"x": 50, "y": 50},
+  "end_point": {"x": 250, "y": 150},
+  "end_arrow": "ARROW",
+  "line_weight": 3,
+  "line_color": "#0000FF"
+}
+```
+
+Create a curved connector:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "start_point": {"x": 100, "y": 100},
+  "end_point": {"x": 200, "y": 200},
+  "line_type": "CURVED",
+  "start_arrow": "OVAL",
+  "end_arrow": "ARROW",
+  "line_dash": "DOT"
+}
+```
+
+**Errors:**
+- `start_point and end_point are required` - Missing coordinates
+- `invalid slide reference` - Neither slide_index nor slide_id provided
+- `slide not found` - Slide doesn't exist
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to modify
+- `failed to create line` - API error
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 

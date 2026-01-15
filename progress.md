@@ -1187,3 +1187,36 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-15 - US-00036 - Implement tool to create line/arrow
+
+**Status:** Success
+
+**What was implemented:**
+- New `create_line` MCP tool to create lines, arrows, and connectors
+- Automatic geometry calculation for line orientation (start/end points)
+- Support for lines in all directions (including anti-diagonal) via transform flips
+- Support for line types: STRAIGHT, CURVED, ELBOW (connector)
+- Support for arrow heads: ARROW, DIAMOND, OVAL, OPEN_ARROW, etc.
+- Styling options: line color, weight, dash style
+- Uses `CreateLineRequest` and `UpdateLinePropertiesRequest` in BatchUpdate
+- Comprehensive test suite with 6 test cases including negative slope handling
+
+**Files changed:**
+- `internal/tools/create_line.go` - Tool implementation
+- `internal/tools/create_line_test.go` - Comprehensive tests
+- `CLAUDE.md` - Added create_line documentation
+- `README.md` - Added create_line tool documentation
+- `stories.yaml` - Marked US-00036 as passes: true
+
+**Learnings:**
+- Google Slides lines are defined by a bounding box (Size + Transform) and a LineCategory
+- To create a line from (x1,y1) to (x2,y2) where the slope is negative, a vertical flip (ScaleY = -1) or rotation is required
+- `CreateLineRequest` allows setting `ElementProperties` including Transform matrix
+- Arrow heads are properties of the line (`StartArrow`, `EndArrow`) in `LineProperties`, not connection sites
+- `CreateLineRequest` uses `Category` field (STRAIGHT, BENT, CURVED) to define line type
+- Reused `pointsToEMU` helper via package-level sharing (careful with visibility)
+
+**Remaining issues:** None
+
+---
