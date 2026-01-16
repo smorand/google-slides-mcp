@@ -2322,3 +2322,53 @@ Implemented the `translate_presentation` MCP tool that translates text in a Goog
 **Test Results:** All 27 tests pass
 
 **Remaining issues:** None
+
+## US-00061: Implement batch operations support
+
+**Files Created/Modified:**
+- `internal/tools/batch_update.go` - Main implementation (~1160 lines):
+  - BatchUpdate tool that executes multiple operations in a single API call
+  - BatchOperation struct with tool_name and parameters
+  - Three on_error modes: stop (default), continue, rollback
+  - Batch optimization: combines compatible operations into single BatchUpdate calls
+  - Support for 10 batchable tools (add_slide, delete_slide, add_text_box, modify_text, delete_object, create_shape, transform_object, style_text, create_bullet_list, create_numbered_list)
+  - Support for 5 non-batchable tools (add_image, add_video, replace_image, set_background, translate_presentation)
+  - Detailed results for each operation with success/failure status
+
+- `internal/tools/batch_update_test.go` - Test suite:
+  - Tests for all story requirements (10 test cases)
+  - TestBatchUpdate_MultipleOperations - Multiple operations execute in sequence
+  - TestBatchUpdate_OnErrorStop - Halts on first error
+  - TestBatchUpdate_OnErrorContinue - Processes all operations (batched ops fail together)
+  - TestBatchUpdate_OnErrorRollback - Atomic batch behavior
+  - TestBatchUpdate_ResultsMatchOperations - Results array matches operations array
+  - TestBatchUpdate_InvalidPresentationID, TestBatchUpdate_EmptyOperations - Validation tests
+  - TestBatchUpdate_InvalidOnErrorMode, TestBatchUpdate_UnsupportedToolName - Error handling tests
+  - TestBatchUpdate_DefaultOnErrorMode - Default mode behavior
+
+- `CLAUDE.md` - Added batch_update tool documentation:
+  - Input/Output struct definitions with examples
+  - On error modes table
+  - Supported operations tables (batchable and non-batchable)
+  - Features list and sentinel errors
+  - Usage patterns with code examples
+
+- `README.md` - Added batch_update tool documentation:
+  - New "Batch Operations" section in tool categories
+  - Complete tool documentation with input/output examples
+  - Parameter tables and error handling modes
+  - Supported operations and features
+
+- `stories.yaml` - Marked US-00061 as passes: true
+
+**Learnings:**
+- Google Slides API BatchUpdate can combine multiple requests into a single call
+- Batchable operations are those that only require slides.Request objects
+- Non-batchable operations need Drive API (images) or Translation API
+- The slides.Response struct doesn't have DeleteText/InsertText fields - those are request-only
+- For test logic, when operations are batched together, they fail/succeed as a unit
+- Use `batchBuildTextStyleRequest` and `batchBuildShapeStyleRequest` for batch context (accept different parameters than the standalone versions)
+
+**Test Results:** All 10 batch_update tests pass
+
+**Remaining issues:** None

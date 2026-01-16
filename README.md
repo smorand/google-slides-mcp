@@ -4982,6 +4982,9 @@ Reply to, resolve, unresolve, or delete a comment in a presentation.
 ### Translation
 - `translate_presentation` - Translate text in a presentation using Google Cloud Translation API
 
+### Batch Operations
+- `batch_update` - Execute multiple operations in a single API call for efficiency
+
 ---
 
 #### `translate_presentation`
@@ -5050,6 +5053,119 @@ Translates text in a presentation using Google Cloud Translation API.
 - `object_id is required when scope is 'object'` - Missing object ID
 - `no translatable text found` - No text found in the specified scope
 - `translation API error` - Google Cloud Translation API error
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to modify the presentation
+
+---
+
+#### `batch_update`
+
+Execute multiple slide operations in a single API call for efficiency.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "operations": [
+    {
+      "tool_name": "add_slide",
+      "parameters": {"position": 1, "layout": "BLANK"}
+    },
+    {
+      "tool_name": "add_text_box",
+      "parameters": {
+        "slide_index": 1,
+        "text": "Hello World",
+        "size": {"width": 300, "height": 100},
+        "position": {"x": 100, "y": 50}
+      }
+    }
+  ],
+  "on_error": "stop"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `operations` | array | Yes | Array of operations to execute |
+| `operations[].tool_name` | string | Yes | Name of the tool to execute |
+| `operations[].parameters` | object | Yes | Tool-specific parameters |
+| `on_error` | string | No | Error handling mode: `stop` (default), `continue`, or `rollback` |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "total_operations": 2,
+  "success_count": 2,
+  "failure_count": 0,
+  "results": [
+    {
+      "index": 0,
+      "tool_name": "add_slide",
+      "success": true,
+      "result": {"slide_id": "slide_123", "slide_index": 1}
+    },
+    {
+      "index": 1,
+      "tool_name": "add_text_box",
+      "success": true,
+      "result": {"object_id": "textbox_456"}
+    }
+  ],
+  "batch_optimized": true,
+  "api_call_count": 1
+}
+```
+
+**On Error Modes:**
+| Mode | Description |
+|------|-------------|
+| `stop` | Stop processing on first error (default). Remaining operations are skipped. |
+| `continue` | Continue processing all operations. Collect errors and return at the end. |
+| `rollback` | Stop on first error. For atomic batch operations, the entire batch fails together. |
+
+**Supported Operations (Batchable):**
+These operations are combined into a single Slides API call for efficiency:
+
+| Tool Name | Description |
+|-----------|-------------|
+| `add_slide` | Add a new slide to the presentation |
+| `delete_slide` | Delete a slide from the presentation |
+| `add_text_box` | Add a text box to a slide |
+| `modify_text` | Modify text content in a shape |
+| `delete_object` | Delete one or more objects |
+| `create_shape` | Create a shape on a slide |
+| `transform_object` | Move, resize, or rotate an object |
+| `style_text` | Apply styling to text |
+| `create_bullet_list` | Convert text to a bullet list |
+| `create_numbered_list` | Convert text to a numbered list |
+
+**Supported Operations (Non-Batchable):**
+These operations require separate API calls but are still supported:
+
+| Tool Name | Description |
+|-----------|-------------|
+| `add_image` | Add an image (requires Drive upload) |
+| `add_video` | Add a video from YouTube or Drive |
+| `replace_image` | Replace an existing image |
+| `set_background` | Set slide background |
+| `translate_presentation` | Translate presentation text |
+
+**Features:**
+- Combines compatible operations into single Slides API BatchUpdate calls
+- Maintains operation order for dependent operations
+- Reports per-operation success/failure status
+- Tracks actual API call count vs operation count
+- Supports three error handling modes
+- Returns detailed results for each operation
+
+**Errors:**
+- `no operations provided` - Operations array is empty
+- `invalid on_error value` - on_error must be 'stop', 'continue', or 'rollback'
+- `unsupported tool name` - Tool name is not supported for batch operations
+- `invalid operation` - Operation has invalid structure or parameters
 - `presentation not found` - Presentation doesn't exist
 - `access denied` - No permission to modify the presentation
 

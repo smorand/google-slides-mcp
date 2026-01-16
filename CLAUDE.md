@@ -5074,6 +5074,172 @@ for _, link := range output.Hyperlinks {
 }
 ```
 
+### batch_update Tool (`batch_update.go`)
+Executes multiple slide operations in a single API call for efficiency.
+
+**Input:**
+```go
+tools.BatchUpdateInput{
+    PresentationID: "presentation-id",      // Required
+    Operations:     []BatchOperation{...},  // Required - array of operations
+    OnError:        "stop",                 // Optional: "stop" (default), "continue", "rollback"
+}
+
+// Each operation contains:
+tools.BatchOperation{
+    ToolName:   "add_text_box",         // Tool name to execute
+    Parameters: json.RawMessage{...},   // Tool-specific parameters as JSON
+}
+```
+
+**Output:**
+```go
+tools.BatchUpdateOutput{
+    PresentationID:  "presentation-id",
+    TotalOperations: 5,                    // Number of operations submitted
+    SuccessCount:    4,                    // Number of successful operations
+    FailureCount:    1,                    // Number of failed operations
+    Results:         []OperationResult{...}, // Result for each operation
+    RolledBack:      false,                // Whether rollback was attempted (for rollback mode)
+    RollbackError:   "",                   // Error if rollback failed
+    StoppedAtIndex:  &index,               // Index where processing stopped (for stop mode)
+    BatchOptimized:  true,                 // Whether operations were batched into fewer API calls
+    APICallCount:    2,                    // Number of actual API calls made
+}
+
+// Each operation result contains:
+tools.OperationResult{
+    Index:     0,                // 0-based index in operations array
+    ToolName:  "add_text_box",   // Tool name
+    Success:   true,             // Whether operation succeeded
+    Result:    json.RawMessage,  // Tool-specific result (if successful)
+    Error:     "",               // Error message (if failed)
+    ErrorCode: "",               // Error code (if failed)
+}
+```
+
+**On Error Modes:**
+| Mode | Description |
+|------|-------------|
+| `stop` | Stop processing on first error (default). Remaining operations are skipped. |
+| `continue` | Continue processing all operations. Collect errors and return at the end. |
+| `rollback` | Stop on first error. For atomic batch operations, the entire batch fails together. |
+
+**Supported Operations (Batchable):**
+These operations are combined into a single Slides API BatchUpdate call for efficiency:
+
+| Tool Name | Description |
+|-----------|-------------|
+| `add_slide` | Add a new slide to the presentation |
+| `delete_slide` | Delete a slide from the presentation |
+| `add_text_box` | Add a text box to a slide |
+| `modify_text` | Modify text content in a shape |
+| `delete_object` | Delete one or more objects |
+| `create_shape` | Create a shape on a slide |
+| `transform_object` | Move, resize, or rotate an object |
+| `style_text` | Apply styling to text |
+| `create_bullet_list` | Convert text to a bullet list |
+| `create_numbered_list` | Convert text to a numbered list |
+
+**Supported Operations (Non-Batchable):**
+These operations require separate API calls but are still supported:
+
+| Tool Name | Description |
+|-----------|-------------|
+| `add_image` | Add an image (requires Drive upload) |
+| `add_video` | Add a video from YouTube or Drive |
+| `replace_image` | Replace an existing image |
+| `set_background` | Set slide background |
+| `translate_presentation` | Translate presentation text |
+
+**Features:**
+- Combines compatible operations into single Slides API BatchUpdate calls
+- Maintains operation order for dependent operations
+- Reports per-operation success/failure status
+- Tracks actual API call count vs operation count
+- Supports three error handling modes
+- Returns detailed results for each operation
+
+**Sentinel Errors:**
+```go
+tools.ErrBatchUpdateFailed    // Generic batch update failure
+tools.ErrInvalidOnError       // Invalid on_error mode (must be stop, continue, or rollback)
+tools.ErrNoOperations         // Operations array is empty
+tools.ErrInvalidOperation     // Operation has invalid structure
+tools.ErrUnsupportedToolName  // Tool name is not supported for batch operations
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Execute multiple operations in a batch
+output, err := tools.BatchUpdate(ctx, tokenSource, tools.BatchUpdateInput{
+    PresentationID: "abc123",
+    Operations: []tools.BatchOperation{
+        {
+            ToolName:   "add_slide",
+            Parameters: json.RawMessage(`{"position": 1, "layout": "BLANK"}`),
+        },
+        {
+            ToolName:   "add_text_box",
+            Parameters: json.RawMessage(`{
+                "slide_index": 1,
+                "text": "Hello World",
+                "size": {"width": 300, "height": 100},
+                "position": {"x": 100, "y": 50}
+            }`),
+        },
+        {
+            ToolName:   "style_text",
+            Parameters: json.RawMessage(`{
+                "object_id": "textbox_123",
+                "style": {"font_family": "Arial", "font_size": 24, "bold": true}
+            }`),
+        },
+    },
+    OnError: "stop",
+})
+
+// Process results
+fmt.Printf("Completed: %d/%d operations\n", output.SuccessCount, output.TotalOperations)
+fmt.Printf("API calls: %d (batch optimized: %v)\n", output.APICallCount, output.BatchOptimized)
+
+for _, result := range output.Results {
+    if result.Success {
+        fmt.Printf("  [%d] %s: OK\n", result.Index, result.ToolName)
+    } else {
+        fmt.Printf("  [%d] %s: FAILED - %s\n", result.Index, result.ToolName, result.Error)
+    }
+}
+
+// Example with continue mode (process all operations)
+output, err := tools.BatchUpdate(ctx, tokenSource, tools.BatchUpdateInput{
+    PresentationID: "abc123",
+    Operations: []tools.BatchOperation{
+        {ToolName: "delete_object", Parameters: json.RawMessage(`{"object_id": "shape-1"}`)},
+        {ToolName: "delete_object", Parameters: json.RawMessage(`{"object_id": "shape-2"}`)},
+        {ToolName: "delete_object", Parameters: json.RawMessage(`{"object_id": "shape-3"}`)},
+    },
+    OnError: "continue",  // Continue even if some deletes fail
+})
+
+// Example with rollback mode (all or nothing)
+output, err := tools.BatchUpdate(ctx, tokenSource, tools.BatchUpdateInput{
+    PresentationID: "abc123",
+    Operations: []tools.BatchOperation{
+        {ToolName: "add_slide", Parameters: json.RawMessage(`{"layout": "BLANK"}`)},
+        {ToolName: "add_slide", Parameters: json.RawMessage(`{"layout": "TITLE"}`)},
+    },
+    OnError: "rollback",  // If any operation fails, none are applied
+})
+if output.RolledBack {
+    fmt.Println("All operations were rolled back due to error")
+}
+```
+
 ### Translate Service Interface
 The tools package uses a `TranslateService` interface for Translation API operations:
 

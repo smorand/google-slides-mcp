@@ -1525,7 +1525,7 @@
   - on_error 'rollback' reverts on any error
   - Results array matches operations array
   - 'Command: go test ./internal/tools/... -run TestBatchUpdate passes'
-  passes: false
+  passes: true
 - id: US-00062
   title: Implement retry logic with exponential backoff
   priority: 20
