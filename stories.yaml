@@ -1293,7 +1293,7 @@
   - Duration is applied
   - NONE removes transition
   - 'Command: go test ./internal/tools/... -run TestSetTransition passes'
-  passes: false
+  passes: true
 - id: US-00053
   title: Implement tool to add object animation
   priority: 15

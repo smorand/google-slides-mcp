@@ -4722,6 +4722,58 @@ Delete with both (all unique IDs):
 - `failed to delete object` - API error
 
 ---
+
+#### `set_transition`
+
+**⚠️ API LIMITATION:** This tool returns an error because the Google Slides API does not support setting slide transitions programmatically.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 1,
+  "transition_type": "FADE",
+  "duration": 0.5
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No | 1-based slide index (use this OR slide_id, or omit for all slides) |
+| `slide_id` | string | No | Slide object ID (alternative to slide_index) |
+| `transition_type` | string | Yes | Transition effect type (see list below) |
+| `duration` | number | No | Duration in seconds (0-10) |
+
+**Transition Types (validated but not supported by API):**
+- `NONE` - No transition
+- `FADE` - Fade effect
+- `SLIDE_FROM_RIGHT`, `SLIDE_FROM_LEFT`, `SLIDE_FROM_TOP`, `SLIDE_FROM_BOTTOM` - Slide effects
+- `FLIP`, `CUBE`, `GALLERY`, `ZOOM`, `DISSOLVE` - Other effects
+
+**Output:**
+The tool always returns an error for valid input because the Google Slides API does not support transitions.
+
+**API Limitation Details:**
+The Google Slides API's `SlideProperties` object only contains:
+- `isSkipped` - Whether slide is skipped in presentation mode
+- `layoutObjectId` - Layout reference
+- `masterObjectId` - Master reference
+- `notesPage` - Speaker notes
+
+There is no transition-related property available in the API.
+
+**Workarounds:**
+1. Use the Google Slides user interface (Slide > Transition)
+2. Use Google Apps Script's `SlidesApp.Slide.setTransition()` method
+
+**Errors:**
+- `slide transitions are not supported by the Google Slides API` - Expected error for all valid input
+- `invalid transition type` - Empty or unsupported transition type
+- `invalid transition duration` - Duration negative or exceeds 10 seconds
+- `presentation_id is required` - Empty presentation ID
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 - `modify_table_structure` - Add/remove rows and columns from tables

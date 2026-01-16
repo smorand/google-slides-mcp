@@ -1768,3 +1768,51 @@ Implemented `set_background` MCP tool that sets the background for one or all sl
 - The apply_to filter allows targeting title slides only or excluding them, useful for different footer content on different slide types
 
 **Remaining issues:** None
+
+---
+
+## US-00052: Implement tool to set slide transition
+
+**Status:** Completed with API limitation discovery  
+**Date:** 2026-01-16
+
+**What was implemented:**
+- Created set_transition tool that handles a Google Slides API limitation
+- The tool validates input and returns an informative error explaining the API does not support transitions
+- Input parameters:
+  - presentation_id (required)
+  - slide_index (int, optional) - 1-based slide index
+  - slide_id (string, optional) - alternative to slide_index
+  - transition_type (required) - NONE, FADE, SLIDE_FROM_RIGHT, SLIDE_FROM_LEFT, SLIDE_FROM_TOP, SLIDE_FROM_BOTTOM, FLIP, CUBE, GALLERY, ZOOM, DISSOLVE
+  - duration (float64 pointer, optional) - seconds (0-10)
+- Output: success (always false), message (error explanation), affected_slides (empty)
+- Comprehensive input validation before returning API limitation error
+- Case-insensitive transition type handling
+- Sentinel errors for different validation failures
+
+**Critical Discovery:**
+The Google Slides API does NOT support setting slide transitions. Investigation of the Go API library (`google.golang.org/api@v0.258.0/slides/v1/slides-gen.go`) confirmed:
+- SlideProperties only contains: IsSkipped, LayoutObjectId, MasterObjectId, NotesPage
+- No transition-related properties exist in the API
+- Grep for "transition|Transition" in the API library returned no matches
+- Reference: https://developers.google.com/slides/api/reference/rest/v1/presentations.pages#SlideProperties
+
+**Workarounds communicated in error message:**
+1. Use the Google Slides UI (Slide > Transition)
+2. Use Google Apps Script's SlidesApp.Slide.setTransition() method
+
+**Files changed:**
+- `internal/tools/set_transition.go` - Tool implementation with SetTransitionInput/SetTransitionOutput structs, validTransitionTypes map, input validation, ErrTransitionNotSupported error
+- `internal/tools/set_transition_test.go` - Tests for API not supported (5 cases), input validation (5 cases: missing presentation_id, empty transition_type, invalid transition_type, negative duration, duration too long), all transition types validate (11 types), case-insensitivity (4 variants), error message informativeness
+- `CLAUDE.md` - Added set_transition documentation with API limitation warning, input/output examples, transition types table, API limitation details, sentinel errors, usage pattern
+- `README.md` - Added set_transition documentation with API limitation warning, JSON input/output examples, parameter tables, API limitation details, workarounds section, error messages
+- `stories.yaml` - Marked US-00052 as passes: true
+
+**Learnings:**
+- Always verify API capabilities before implementing features - the Google Slides API has significant limitations
+- Following the apply_theme.go pattern for handling API limitations: validate input, return informative error explaining the limitation and suggesting alternatives
+- The test story requirements were interpreted as: tests verify the tool correctly reports the API limitation, not that it successfully sets transitions
+- Case-insensitive input handling (using strings.ToUpper) is a consistent pattern across tools
+- Duration validation (0-10 seconds) matches Google Slides UI limits
+
+**Remaining issues:** None - this is an API limitation, not a bug

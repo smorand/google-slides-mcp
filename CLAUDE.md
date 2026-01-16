@@ -4251,6 +4251,66 @@ if len(output.NotFoundIDs) > 0 {
 }
 ```
 
+### set_transition Tool (`set_transition.go`)
+**API LIMITATION:** This tool returns an error because the Google Slides API does not support setting slide transitions programmatically.
+
+**Input:**
+```go
+tools.SetTransitionInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID OR omit for all)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    TransitionType: "FADE",             // Required: NONE, FADE, SLIDE_FROM_RIGHT, etc.
+    Duration:       &0.5,               // Optional: duration in seconds (0-10)
+}
+```
+
+**Output:**
+```go
+tools.SetTransitionOutput{
+    Success:        bool,       // Always false (API limitation)
+    Message:        string,     // Error explanation
+    AffectedSlides: []string,   // Empty (API limitation)
+}
+```
+
+**Transition Types (validated but not supported by API):**
+- `NONE` - No transition
+- `FADE` - Fade effect
+- `SLIDE_FROM_RIGHT`, `SLIDE_FROM_LEFT`, `SLIDE_FROM_TOP`, `SLIDE_FROM_BOTTOM` - Slide effects
+- `FLIP`, `CUBE`, `GALLERY`, `ZOOM`, `DISSOLVE` - Other effects
+
+**Important API Limitation:**
+The Google Slides API does NOT support setting slide transitions. The SlideProperties object only contains:
+- `isSkipped` - Whether slide is skipped in presentation mode
+- `layoutObjectId` - Layout reference
+- `masterObjectId` - Master reference
+- `notesPage` - Speaker notes
+
+Transitions can only be configured through the Google Slides user interface (Slide > Transition) or via Google Apps Script.
+
+**Sentinel Errors:**
+```go
+tools.ErrTransitionNotSupported     // API does not support transitions (always returned for valid input)
+tools.ErrInvalidTransitionType      // Empty or invalid transition type
+tools.ErrInvalidTransitionDuration  // Duration negative or exceeds 10 seconds
+tools.ErrInvalidPresentationID      // Empty presentation ID
+```
+
+**Usage Pattern:**
+```go
+// Attempting to set transition will return informative error
+output, err := tools.SetTransition(ctx, tokenSource, tools.SetTransitionInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    TransitionType: "FADE",
+})
+if errors.Is(err, tools.ErrTransitionNotSupported) {
+    // Expected error - inform user to use Slides UI instead
+    fmt.Println("Transitions must be set via Google Slides UI (Slide > Transition)")
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
