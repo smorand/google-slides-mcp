@@ -2353,6 +2353,102 @@ fmt.Printf("Created image: %s\n", output.ObjectID)
 | WebP | `52 49 46 46...57 45 42 50` (RIFF...WEBP) |
 | BMP | `42 4D` (BM) |
 
+### add_video Tool (`add_video.go`)
+Adds a video to a slide from YouTube or Google Drive.
+
+**Input:**
+```go
+tools.AddVideoInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    VideoSource:    "youtube",          // Required: "youtube" or "drive"
+    VideoID:        "dQw4w9WgXcQ",      // Required: YouTube video ID or Drive file ID
+    Position:       &PositionInput{X: 100, Y: 50},  // Optional - position in points
+    Size:           &SizeInput{Width: 400, Height: 225},  // Optional - size in points
+    StartTime:      &startTime,         // Optional - start time in seconds
+    EndTime:        &endTime,           // Optional - end time in seconds
+    Autoplay:       false,              // Optional - auto-play video (default: false)
+    Mute:           false,              // Optional - mute video (default: false)
+}
+```
+
+**Output:**
+```go
+tools.AddVideoOutput{
+    ObjectID: "video_1234567890",  // Unique ID of the created video
+}
+```
+
+**Video Sources:**
+| Source | Description |
+|--------|-------------|
+| `youtube` | YouTube video (provide YouTube video ID) |
+| `drive` | Google Drive video (provide Drive file ID) |
+
+**Features:**
+- Accepts either 1-based slide index OR slide ID for slide identification
+- Video source is case-insensitive ("youtube", "YOUTUBE", "YouTube" all work)
+- Position and size are optional - API determines default placement if not specified
+- Start/end times allow trimming the video (in seconds, converted to milliseconds for API)
+- Autoplay and mute settings control playback behavior
+- Uses CreateVideoRequest followed by UpdateVideoPropertiesRequest for playback settings
+- 1 point = 12700 EMU (English Metric Units)
+
+**Sentinel Errors:**
+```go
+tools.ErrAddVideoFailed         // Generic video creation failure
+tools.ErrInvalidVideoSource     // Video source must be 'youtube' or 'drive'
+tools.ErrInvalidVideoID         // Video ID is required
+tools.ErrInvalidVideoSize       // Size must have positive width and height
+tools.ErrInvalidVideoPosition   // Position coordinates must be non-negative
+tools.ErrInvalidVideoTime       // Time values must be non-negative
+tools.ErrInvalidVideoTimeRange  // End time must be greater than start time
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Add YouTube video with position and size
+output, err := tools.AddVideo(ctx, tokenSource, tools.AddVideoInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    VideoSource:    "youtube",
+    VideoID:        "dQw4w9WgXcQ",
+    Position:       &tools.PositionInput{X: 100, Y: 50},
+    Size:           &tools.SizeInput{Width: 400, Height: 225},
+})
+
+// Add Drive video with trimming
+startTime := 30.0   // Start at 30 seconds
+endTime := 120.0    // End at 2 minutes
+output, err := tools.AddVideo(ctx, tokenSource, tools.AddVideoInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+    VideoSource:    "drive",
+    VideoID:        "drive-file-id",
+    StartTime:      &startTime,
+    EndTime:        &endTime,
+})
+
+// Add video with autoplay and mute
+output, err := tools.AddVideo(ctx, tokenSource, tools.AddVideoInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    VideoSource:    "youtube",
+    VideoID:        "dQw4w9WgXcQ",
+    Autoplay:       true,
+    Mute:           true,
+})
+
+fmt.Printf("Created video: %s\n", output.ObjectID)
+```
+
 ### modify_image Tool (`modify_image.go`)
 Modifies properties of an existing image in a presentation.
 

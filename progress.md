@@ -1574,3 +1574,42 @@ Implemented `style_table_cells` MCP tool that applies visual styling (background
 **Remaining issues:** None
 
 ---
+
+## US-00047: Implement tool to add video to slide
+
+**Status:** ✅ Completed
+
+**Implementation Summary:**
+Implemented `add_video` MCP tool that adds YouTube or Google Drive videos to slides with position, size, and playback settings.
+
+**Key Implementation Details:**
+- Video source: "youtube" or "drive" (case-insensitive)
+- Video ID: YouTube video ID or Google Drive file ID
+- Optional position and size in points (converted to EMU internally)
+- Optional start_time and end_time in seconds for video trimming (converted to milliseconds for API)
+- Optional autoplay and mute boolean settings
+- Uses CreateVideoRequest for initial video creation
+- Uses UpdateVideoPropertiesRequest for playback settings (start, end, autoPlay, mute)
+- Position uses AffineTransform with TranslateX/TranslateY
+- Size uses Dimension with Width/Height in EMU
+- Video-specific time function (videoTimeNowFunc) for deterministic test IDs
+- Sentinel errors: ErrAddVideoFailed, ErrInvalidVideoSource, ErrInvalidVideoID, ErrInvalidVideoSize, ErrInvalidVideoPosition, ErrInvalidVideoTime, ErrInvalidVideoTimeRange
+
+**Files changed:**
+- `internal/tools/add_video.go` - Tool implementation with AddVideoInput/AddVideoOutput structs, validation, CreateVideoRequest and UpdateVideoPropertiesRequest builders
+- `internal/tools/add_video_test.go` - Comprehensive tests (24 test cases: YouTube success, Drive success, start/end times, autoplay/mute, position/size, slide ID selection, validation errors, API errors, case-insensitivity)
+- `CLAUDE.md` - Added add_video documentation with input/output examples, video sources table, usage patterns
+- `stories.yaml` - Marked US-00047 as passes: true
+
+**Learnings:**
+- Google Slides API CreateVideoRequest uses Source field (YOUTUBE or DRIVE) and Id field for video identifier
+- Video playback properties (start, end, autoPlay, mute) are set via separate UpdateVideoPropertiesRequest
+- API uses milliseconds for start/end times, but user-facing input uses seconds for better UX
+- UpdateVideoPropertiesRequest requires Fields mask specifying which fields to update
+- AutoPlay field in API is camelCase (AutoPlay), not snake_case
+- Same slide finding pattern (findSlide) reused from add_text_box and add_image tools
+- Same EMU conversion (pointsToEMU) and position/size patterns as other element tools
+
+**Remaining issues:** None
+
+---

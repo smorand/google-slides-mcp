@@ -1168,7 +1168,7 @@
   - Start/end times work for trimming
   - Autoplay and mute settings work
   - 'Command: go test ./internal/tools/... -run TestAddVideo passes'
-  passes: false
+  passes: true
 - id: US-00048
   title: Implement tool to modify video properties
   priority: 12
