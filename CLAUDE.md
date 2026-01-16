@@ -3634,6 +3634,91 @@ output, err := tools.ModifyShape(ctx, tokenSource, tools.ModifyShapeInput{
 })
 ```
 
+### apply_theme Tool (`apply_theme.go`)
+Applies theme colors from one presentation to another.
+
+**Input:**
+```go
+tools.ApplyThemeInput{
+    PresentationID:       "target-presentation-id",  // Required - presentation to apply theme to
+    ThemeSource:          "presentation",            // Required: "gallery" or "presentation"
+    ThemeID:              "theme-id",                // For "gallery" source (not supported)
+    SourcePresentationID: "source-presentation-id", // For "presentation" source (required)
+}
+```
+
+**Output:**
+```go
+tools.ApplyThemeOutput{
+    Success:           true,
+    Message:           "Theme colors applied successfully from source presentation",
+    UpdatedProperties: []string{"color_dark1", "color_light1", ...},  // List of updated color types
+    SourceMasterID:    "source-master-id",    // Master slide ID from source
+    TargetMasterID:    "target-master-id",    // Master slide ID in target
+}
+```
+
+**Theme Sources:**
+| Source | Description |
+|--------|-------------|
+| `presentation` | Copies color scheme from another presentation's master |
+| `gallery` | NOT SUPPORTED - Gallery themes cannot be applied via API |
+
+**Important API Limitation:**
+Gallery themes (the built-in themes available in Google Slides UI) cannot be applied via the Google Slides API. This is a limitation of the API itself. To apply gallery themes, users must:
+1. Use the Google Slides UI (Slide > Change theme), or
+2. Use the `presentation` source to copy theme colors from an existing presentation that has the desired theme
+
+**Supported Color Types:**
+The API allows updating these 12 theme color types:
+- `DARK1`, `LIGHT1` - Primary dark/light colors
+- `DARK2`, `LIGHT2` - Secondary dark/light colors
+- `ACCENT1` through `ACCENT6` - Accent colors
+- `HYPERLINK` - Hyperlink color
+- `FOLLOWED_HYPERLINK` - Visited hyperlink color
+
+**Features:**
+- Copies all 12 editable theme colors from source to target presentation
+- Theme source is case-insensitive ("presentation", "PRESENTATION" both work)
+- Uses `UpdatePagePropertiesRequest` with colorScheme field on master slide
+- Returns clear error message for gallery themes explaining the limitation
+
+**Sentinel Errors:**
+```go
+tools.ErrApplyThemeFailed     // Generic theme application failure
+tools.ErrInvalidThemeSource   // Theme source must be 'gallery' or 'presentation'
+tools.ErrGalleryNotSupported  // Gallery themes not available via API
+tools.ErrNoMasterInSource     // No master slides found in source presentation
+tools.ErrNoMasterInTarget     // No master slides found in target presentation
+tools.ErrNoColorScheme        // No color scheme found in source presentation
+tools.ErrInvalidSourcePresID  // Source presentation ID required for 'presentation' source
+tools.ErrSourceNotFound       // Source presentation not found
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Target presentation not found
+tools.ErrAccessDenied          // No permission to access/modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Copy theme colors from another presentation
+output, err := tools.ApplyTheme(ctx, tokenSource, tools.ApplyThemeInput{
+    PresentationID:       "target-presentation-id",
+    ThemeSource:          "presentation",
+    SourcePresentationID: "template-presentation-id",
+})
+
+if err != nil {
+    if errors.Is(err, tools.ErrGalleryNotSupported) {
+        // Inform user to use Slides UI for gallery themes
+    }
+    // Handle other errors
+}
+
+fmt.Printf("Applied theme from %s to %s\n", output.SourceMasterID, output.TargetMasterID)
+fmt.Printf("Updated colors: %v\n", output.UpdatedProperties)
+```
+
 ### transform_object Tool (`transform_object.go`)
 Moves, resizes, or rotates any object.
 

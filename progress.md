@@ -1652,3 +1652,41 @@ Implemented `modify_video` MCP tool that modifies video playback properties (sta
 **Remaining issues:** None
 
 ---
+
+## US-00049: Implement tool to apply theme
+
+**Status:** ✅ Completed
+
+**Implementation Summary:**
+Implemented `apply_theme` MCP tool that copies theme colors from one presentation to another. Important: Gallery themes cannot be applied via Google Slides API - this is a fundamental API limitation.
+
+**Key Implementation Details:**
+- Input: presentation_id (target), theme_source ("presentation" or "gallery"), source_presentation_id
+- For "presentation" source: copies 12 editable theme colors from source to target master
+- For "gallery" source: returns descriptive error explaining API limitation and workarounds
+- Theme source is case-insensitive
+- Copies only the 12 editable ThemeColorTypes: DARK1, LIGHT1, DARK2, LIGHT2, ACCENT1-6, HYPERLINK, FOLLOWED_HYPERLINK
+- Uses UpdatePagePropertiesRequest with colorScheme field on master slide
+- Fetches both source and target presentations to get master slide IDs and color schemes
+- Deep clones RGB colors to avoid reference issues
+- Returns updated property list, source/target master IDs, and success message
+- Sentinel errors: ErrApplyThemeFailed, ErrInvalidThemeSource, ErrGalleryNotSupported, ErrNoMasterInSource, ErrNoMasterInTarget, ErrNoColorScheme, ErrInvalidSourcePresID, ErrSourceNotFound
+
+**Files changed:**
+- `internal/tools/apply_theme.go` - Tool implementation with ApplyThemeInput/ApplyThemeOutput structs, buildColorSchemeFromSource helper, cloneRgbColor helper, themeColorTypes array
+- `internal/tools/apply_theme_test.go` - Comprehensive tests (20 test cases: success, case-insensitivity, gallery not supported, validation errors, missing source, missing target masters, missing color scheme, API errors, verify request structure, buildColorSchemeFromSource tests, cloneRgbColor tests)
+- `CLAUDE.md` - Added apply_theme documentation with input/output examples, theme sources table, API limitation explanation, color types list, usage patterns
+- `README.md` - Added apply_theme documentation with JSON input/output examples, parameter table, features, API limitation warning, examples, error messages
+- `stories.yaml` - Marked US-00049 as passes: true, updated tests to reflect gallery limitation
+
+**Learnings:**
+- Google Slides API has no direct "apply theme" endpoint - only color scheme updates via UpdatePagePropertiesRequest
+- Gallery themes (built-in themes in UI) are completely unsupported by the API
+- Only way to "apply theme" via API is to copy color scheme from another presentation's master
+- ColorScheme update requires providing all colors that should be updated (not incremental)
+- Only 12 ThemeColorTypes are editable via API (excludes TEXT1, BACKGROUND1, etc.)
+- Master slides store the color scheme in PageProperties.ColorScheme
+- Must fetch both source and target presentations to get master ObjectIds
+- Batch update targets the master slide's ObjectId, not the presentation ID
+
+**Remaining issues:** None

@@ -4132,6 +4132,86 @@ Make transparent with dashed outline:
 
 ---
 
+#### `apply_theme`
+
+Apply theme colors from one presentation to another.
+
+**Input:**
+```json
+{
+  "presentation_id": "target-presentation-id",
+  "theme_source": "presentation",
+  "source_presentation_id": "template-presentation-id"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | Target presentation to apply theme to |
+| `theme_source` | string | Yes | Source type: "presentation" or "gallery" |
+| `theme_id` | string | No | Gallery theme ID (not supported - see below) |
+| `source_presentation_id` | string | Conditional | Required when theme_source is "presentation" |
+
+**Output:**
+```json
+{
+  "success": true,
+  "message": "Theme colors applied successfully from source presentation",
+  "updated_properties": ["color_dark1", "color_light1", "color_dark2", ...],
+  "source_master_id": "source-master-id",
+  "target_master_id": "target-master-id"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the operation succeeded |
+| `message` | string | Human-readable result message |
+| `updated_properties` | array | List of color types that were updated |
+| `source_master_id` | string | Object ID of the source master slide |
+| `target_master_id` | string | Object ID of the target master slide |
+
+**Features:**
+- Copies all 12 editable theme colors from source to target presentation
+- Theme source is case-insensitive ("presentation", "PRESENTATION")
+- Updates color scheme on the target presentation's master slide
+
+**Supported Color Types:**
+The following 12 theme color types are copied:
+- `DARK1`, `LIGHT1` - Primary dark/light colors
+- `DARK2`, `LIGHT2` - Secondary dark/light colors
+- `ACCENT1` through `ACCENT6` - Accent colors
+- `HYPERLINK`, `FOLLOWED_HYPERLINK` - Link colors
+
+**Important API Limitation:**
+Gallery themes (built-in themes in Google Slides UI) **cannot** be applied via the Google Slides API. This is a fundamental limitation of the API. To use gallery themes:
+1. Apply them manually in Google Slides UI (Slide > Change theme)
+2. Use `theme_source: "presentation"` to copy colors from a presentation that already has the desired theme
+
+**Examples:**
+
+Copy theme from a template:
+```json
+{
+  "presentation_id": "target-pres-id",
+  "theme_source": "presentation",
+  "source_presentation_id": "company-template-id"
+}
+```
+
+**Errors:**
+- `gallery themes are not supported by the API` - Cannot apply gallery themes via API
+- `invalid theme source` - Must be "gallery" or "presentation"
+- `source_presentation_id is required` - Missing source ID for presentation source
+- `no master slides found in source presentation` - Source has no masters
+- `no master slides found in target presentation` - Target has no masters
+- `no color scheme found in source presentation` - Source has no color scheme
+- `source presentation not found` - Source doesn't exist
+- `presentation not found` - Target doesn't exist
+- `access denied` - No permission to access/modify
+
+---
+
 #### `transform_object`
 
 Move, resize, or rotate any object.
