@@ -1533,3 +1533,44 @@
 **Remaining issues:** None
 
 ---
+
+## US-00046: Implement tool to style table cells
+
+**Status:** ✅ Completed
+
+**Implementation Summary:**
+Implemented `style_table_cells` MCP tool that applies visual styling (background color, borders) to table cells with flexible cell selection options.
+
+**Key Implementation Details:**
+- Cell selection via ParseCellSelector: "all" (entire table), "row:N" (entire row), "column:N" (entire column), or array of {row, column} positions
+- Background color using UpdateTableCellPropertiesRequest with TableCellBackgroundFill.SolidFill
+- Borders using UpdateTableBorderPropertiesRequest with BorderPosition (TOP, BOTTOM, LEFT, RIGHT)
+- TableBorderProperties supports color, width (points), and dash_style (SOLID, DOT, DASH, DASH_DOT, LONG_DASH, LONG_DASH_DOT)
+- Cell selector strings are case-insensitive (normalized to lowercase)
+- Dash style names are case-insensitive (normalized to uppercase)
+- Validates at least one style property is provided
+- Validates cell positions are within table bounds
+- Sentinel errors: ErrStyleTableCellsFailed, ErrInvalidCellSelector, ErrNoCellStyle
+- Helper functions: ParseCellSelector, hasAnyStyle, validateBorderStyles, resolveCellPositions, buildStyleTableCellsRequests, buildBorderRequests
+
+**Files changed:**
+- `internal/tools/style_table_cells.go` - Tool implementation with CellSelector parsing, style application via UpdateTableCellPropertiesRequest and UpdateTableBorderPropertiesRequest
+- `internal/tools/style_table_cells_test.go` - Comprehensive tests (60 test cases: 20 main tests, 14 ParseCellSelector tests, 8 resolveCellPositions tests, 5 buildStyleTableCellsRequests tests, 7 hasAnyStyle tests, 6 validateBorderStyles tests)
+- `CLAUDE.md` - Added style_table_cells documentation with cell selector options, dash styles, sentinel errors, usage patterns
+- `README.md` - Added style_table_cells tool documentation with input parameters, examples, and errors
+- `stories.yaml` - Marked US-00046 as passes: true
+
+**Learnings:**
+- UpdateTableCellPropertiesRequest handles cell background via TableCellBackgroundFill.SolidFill
+- UpdateTableBorderPropertiesRequest is SEPARATE from UpdateTableCellPropertiesRequest (not nested)
+- BorderPosition is a string field directly on UpdateTableBorderPropertiesRequest (TOP, BOTTOM, LEFT, RIGHT)
+- TableBorderProperties uses TableBorderFill.SolidFill for color (different from TableCellBackgroundFill)
+- Weight field on TableBorderProperties uses Dimension with PT unit (same as other measurements)
+- DashStyle is a string field directly on TableBorderProperties (not nested)
+- Each cell needs separate UpdateTableCellPropertiesRequest/UpdateTableBorderPropertiesRequest (no multi-cell support in single request)
+- Cell selector parsing handles multiple formats: string literals, position arrays, and typed position slices
+- toInt helper needed for JSON number conversion (float64 to int) during parsing
+
+**Remaining issues:** None
+
+---

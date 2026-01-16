@@ -3114,6 +3114,144 @@ output, err := tools.ModifyTableCell(ctx, tokenSource, tools.ModifyTableCellInpu
 fmt.Printf("Modified properties: %v\n", output.ModifiedProperties)
 ```
 
+### style_table_cells Tool (`style_table_cells.go`)
+Applies visual styling (background color, borders) to table cells.
+
+**Input:**
+```go
+tools.StyleTableCellsInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "table-object-id",  // Required - ID of the table
+    Cells:          CellSelector{...},  // Required - cell selection (see below)
+    Style:          &TableCellsStyleInput{...},  // Required - style to apply
+}
+
+// Cell selector options:
+// 1. Select all cells: "all"
+// 2. Select entire row: "row:N" (0-based)
+// 3. Select entire column: "column:N" (0-based)
+// 4. Select specific cells: array of {row, column} positions
+
+// Style options:
+tools.TableCellsStyleInput{
+    BackgroundColor: "#FF0000",               // Optional - hex color for cell background
+    BorderTop:       &TableBorderInput{...},  // Optional - top border style
+    BorderBottom:    &TableBorderInput{...},  // Optional - bottom border style
+    BorderLeft:      &TableBorderInput{...},  // Optional - left border style
+    BorderRight:     &TableBorderInput{...},  // Optional - right border style
+}
+
+// Border style options:
+tools.TableBorderInput{
+    Color:     "#0000FF",  // Optional - hex color for border
+    Width:     2.0,        // Optional - border width in points
+    DashStyle: "SOLID",    // Optional: SOLID, DOT, DASH, DASH_DOT, LONG_DASH, LONG_DASH_DOT
+}
+```
+
+**Output:**
+```go
+tools.StyleTableCellsOutput{
+    ObjectID:      "table-object-id",
+    CellsAffected: 6,                                           // Number of cells modified
+    AppliedStyles: []string{"background_color=#FF0000", ...},   // List of styles applied
+}
+```
+
+**Cell Selection Options:**
+| Format | Description |
+|--------|-------------|
+| `"all"` | Select all cells in the table |
+| `"row:N"` | Select all cells in row N (0-based) |
+| `"column:N"` | Select all cells in column N (0-based) |
+| `[{row: 0, column: 1}, ...]` | Select specific cells by position |
+
+**Dash Styles:**
+| Style | Description |
+|-------|-------------|
+| `SOLID` | Solid line |
+| `DOT` | Dotted line |
+| `DASH` | Dashed line |
+| `DASH_DOT` | Alternating dash and dot |
+| `LONG_DASH` | Long dashes |
+| `LONG_DASH_DOT` | Long dash and dot |
+
+**Features:**
+- Flexible cell selection: all cells, entire row, entire column, or specific positions
+- Apply background color using UpdateTableCellPropertiesRequest
+- Apply borders using UpdateTableBorderPropertiesRequest
+- Multiple borders can be applied in a single call
+- Selector strings are case-insensitive ("ALL", "all", "Row:0" all work)
+- Dash style names are case-insensitive
+
+**Sentinel Errors:**
+```go
+tools.ErrStyleTableCellsFailed // Generic styling failure
+tools.ErrInvalidCellSelector   // Invalid cell selector format
+tools.ErrNoCellStyle           // No style properties provided
+tools.ErrNotATable             // Object is not a table
+tools.ErrObjectNotFound        // Table object ID not found in presentation
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Apply background color to all cells
+output, err := tools.StyleTableCells(ctx, tokenSource, tools.StyleTableCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Cells:          CellSelector{All: true},  // or parse from "all"
+    Style: &tools.TableCellsStyleInput{
+        BackgroundColor: "#E6F2FF",
+    },
+})
+
+// Style header row (row 0) with background and bottom border
+output, err := tools.StyleTableCells(ctx, tokenSource, tools.StyleTableCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Cells:          CellSelector{Row: intPtr(0)},  // or parse from "row:0"
+    Style: &tools.TableCellsStyleInput{
+        BackgroundColor: "#4A86E8",
+        BorderBottom: &tools.TableBorderInput{
+            Color: "#000000",
+            Width: 2.0,
+        },
+    },
+})
+
+// Apply dashed border to specific cells
+output, err := tools.StyleTableCells(ctx, tokenSource, tools.StyleTableCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Cells: CellSelector{
+        Positions: []CellPosition{{Row: 1, Column: 0}, {Row: 1, Column: 1}},
+    },
+    Style: &tools.TableCellsStyleInput{
+        BorderTop: &tools.TableBorderInput{
+            Color:     "#FF0000",
+            Width:     1.5,
+            DashStyle: "DASH",
+        },
+    },
+})
+
+// Style entire column
+output, err := tools.StyleTableCells(ctx, tokenSource, tools.StyleTableCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Cells:          CellSelector{Column: intPtr(2)},  // or parse from "column:2"
+    Style: &tools.TableCellsStyleInput{
+        BackgroundColor: "#F0F0F0",
+    },
+})
+
+fmt.Printf("Styled %d cells: %v\n", output.CellsAffected, output.AppliedStyles)
+```
+
 ### create_line Tool (`create_line.go`)
 Creates a line or arrow on a slide.
 

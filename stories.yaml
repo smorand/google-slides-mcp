@@ -1136,7 +1136,7 @@
   - Selection by row/column works
   - '''all'' applies to entire table'
   - 'Command: go test ./internal/tools/... -run TestStyleTableCells passes'
-  passes: false
+  passes: true
 - id: US-00047
   title: Implement tool to add video to slide
   priority: 12

@@ -3634,6 +3634,165 @@ Combine text, styling, and alignment:
 
 ---
 
+#### `style_table_cells`
+
+Apply visual styling (background color, borders) to table cells.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "table_xyz123",
+  "cells": "all",
+  "style": {
+    "background_color": "#E6F2FF",
+    "border_top": {
+      "color": "#000000",
+      "width": 2.0,
+      "dash_style": "SOLID"
+    }
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | Object ID of the table |
+| `cells` | string/array | Yes | Cell selection (see below) |
+| `style` | object | Yes | Style options to apply |
+| `style.background_color` | string | No | Cell background color (hex, e.g., "#FF0000") |
+| `style.border_top` | object | No | Top border style |
+| `style.border_bottom` | object | No | Bottom border style |
+| `style.border_left` | object | No | Left border style |
+| `style.border_right` | object | No | Right border style |
+| `border.color` | string | No | Border color (hex) |
+| `border.width` | number | No | Border width in points |
+| `border.dash_style` | string | No | Border dash style (see below) |
+
+**Cell Selection Options:**
+| Format | Description |
+|--------|-------------|
+| `"all"` | Select all cells in the table |
+| `"row:N"` | Select all cells in row N (0-based) |
+| `"column:N"` | Select all cells in column N (0-based) |
+| `[{"row": 0, "column": 1}, ...]` | Select specific cells by position |
+
+**Border Dash Styles:**
+- `SOLID` - Solid line (default)
+- `DOT` - Dotted line
+- `DASH` - Dashed line
+- `DASH_DOT` - Alternating dash and dot
+- `LONG_DASH` - Long dashes
+- `LONG_DASH_DOT` - Long dash and dot
+
+**Note:** At least one style property must be provided.
+
+**Output:**
+```json
+{
+  "object_id": "table_xyz123",
+  "cells_affected": 6,
+  "applied_styles": ["background_color=#E6F2FF", "border_top(color=#000000,width=2.0)"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The table's object ID |
+| `cells_affected` | integer | Number of cells that were styled |
+| `applied_styles` | array | List of styles that were applied |
+
+**Features:**
+- Flexible cell selection: all cells, entire row, entire column, or specific positions
+- Apply background color using UpdateTableCellPropertiesRequest
+- Apply borders using UpdateTableBorderPropertiesRequest
+- Multiple borders can be applied in a single call
+- Selector strings are case-insensitive ("ALL", "all", "Row:0" all work)
+- Dash style names are case-insensitive
+
+**Use Cases:**
+- Highlighting header rows with background color
+- Adding borders to separate sections
+- Styling alternating rows for readability
+- Emphasizing specific cells with borders
+- Creating visually distinct table regions
+
+**Examples:**
+
+Apply background color to all cells:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "cells": "all",
+  "style": {
+    "background_color": "#E6F2FF"
+  }
+}
+```
+
+Style header row with background and border:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "cells": "row:0",
+  "style": {
+    "background_color": "#4A86E8",
+    "border_bottom": {
+      "color": "#000000",
+      "width": 2.0
+    }
+  }
+}
+```
+
+Apply dashed border to specific cells:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "cells": [{"row": 1, "column": 0}, {"row": 1, "column": 1}],
+  "style": {
+    "border_top": {
+      "color": "#FF0000",
+      "width": 1.5,
+      "dash_style": "DASH"
+    }
+  }
+}
+```
+
+Style entire column:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "cells": "column:2",
+  "style": {
+    "background_color": "#F0F0F0"
+  }
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid object ID: object_id is required` - Empty object ID
+- `no style specified: style is required` - Missing style object
+- `no style specified: at least one style property must be specified` - Empty style object
+- `invalid cell selector` - Invalid cell selection format
+- `invalid cell selector: row X is out of range` - Row index out of bounds
+- `invalid cell selector: column X is out of range` - Column index out of bounds
+- `failed to style table cells: invalid dash_style` - Invalid border dash style
+- `object is not a table` - Object ID doesn't refer to a table
+- `object not found` - Table object ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to style table cells` - API error during styling
+
+---
+
 #### `create_line`
 
 Create a line or arrow on a slide.
@@ -4171,6 +4330,7 @@ Delete with both (all unique IDs):
 - `modify_table_structure` - Add/remove rows and columns from tables
 - `merge_cells` - Merge or unmerge table cells
 - `modify_table_cell` - Modify table cell content and styling
+- `style_table_cells` - Apply visual styling (background color, borders) to table cells
 
 ### Styling and Themes
 - `apply_theme` - Apply presentation themes
