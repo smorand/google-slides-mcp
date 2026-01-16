@@ -2746,6 +2746,114 @@ output, err := tools.CreateTable(ctx, tokenSource, tools.CreateTableInput{
 fmt.Printf("Created table: %s (%dx%d)\n", output.ObjectID, output.Rows, output.Columns)
 ```
 
+### modify_table_structure Tool (`modify_table_structure.go`)
+Adds or removes rows/columns from an existing table.
+
+**Input:**
+```go
+tools.ModifyTableStructureInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "table-object-id",  // Required - ID of the table to modify
+    Action:         "add_row",          // Required: "add_row", "delete_row", "add_column", "delete_column"
+    Index:          1,                  // Required - 0-based index where to add/which to delete
+    Count:          1,                  // Optional - how many to add/delete (default 1)
+    InsertAfter:    &true,              // Optional - for add actions: insert after index (default true)
+}
+```
+
+**Output:**
+```go
+tools.ModifyTableStructureOutput{
+    ObjectID:   "table-object-id",  // The modified table's ID
+    Action:     "add_row",          // The action performed (normalized lowercase)
+    Index:      1,                  // The index used
+    Count:      1,                  // Number of rows/columns added/deleted
+    NewRows:    4,                  // Updated row count after modification
+    NewColumns: 3,                  // Updated column count after modification
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `add_row` | Adds row(s) at the specified index |
+| `delete_row` | Deletes row(s) starting at the specified index |
+| `add_column` | Adds column(s) at the specified index |
+| `delete_column` | Deletes column(s) starting at the specified index |
+
+**Features:**
+- Action names are case-insensitive (add_row, ADD_ROW both work)
+- Index is 0-based (first row/column is index 0)
+- For add actions, `insert_after` controls position:
+  - `true` (default): Insert after the index (below for rows, right for columns)
+  - `false`: Insert before the index (above for rows, left for columns)
+- For delete actions, deletes starting from index and continuing for count items
+- Validates that table has at least 1 row and 1 column after deletion
+- Uses InsertTableRowsRequest/DeleteTableRowRequest and InsertTableColumnsRequest/DeleteTableColumnRequest in Slides API BatchUpdate
+
+**Sentinel Errors:**
+```go
+tools.ErrModifyTableStructureFailed // Generic table modification failure
+tools.ErrInvalidTableAction         // Invalid action (not one of the four valid actions)
+tools.ErrInvalidTableIndex          // Index out of range for the operation
+tools.ErrNotATable                  // Object is not a table
+tools.ErrInvalidCount               // Count less than 1, or would delete all rows/columns
+tools.ErrObjectNotFound             // Table object ID not found in presentation
+tools.ErrInvalidPresentationID      // Empty presentation ID
+tools.ErrPresentationNotFound       // Presentation not found
+tools.ErrAccessDenied               // No permission to modify
+tools.ErrSlidesAPIError             // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Add a single row after row index 1 (inserts as row 2)
+output, err := tools.ModifyTableStructure(ctx, tokenSource, tools.ModifyTableStructureInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "add_row",
+    Index:          1,
+})
+
+// Add 3 columns after column index 0
+output, err := tools.ModifyTableStructure(ctx, tokenSource, tools.ModifyTableStructureInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "add_column",
+    Index:          0,
+    Count:          3,
+})
+
+// Add row above index 0 (at the beginning)
+insertAfter := false
+output, err := tools.ModifyTableStructure(ctx, tokenSource, tools.ModifyTableStructureInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "add_row",
+    Index:          0,
+    InsertAfter:    &insertAfter,
+})
+
+// Delete 2 rows starting at index 1
+output, err := tools.ModifyTableStructure(ctx, tokenSource, tools.ModifyTableStructureInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "delete_row",
+    Index:          1,
+    Count:          2,
+})
+
+// Delete single column at index 3
+output, err := tools.ModifyTableStructure(ctx, tokenSource, tools.ModifyTableStructureInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "delete_column",
+    Index:          3,
+})
+
+fmt.Printf("Table now has %d rows and %d columns\n", output.NewRows, output.NewColumns)
+```
+
 ### create_line Tool (`create_line.go`)
 Creates a line or arrow on a slide.
 

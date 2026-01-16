@@ -1416,3 +1416,41 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00043 - Implement tool to modify table structure
+
+**Status:** Success
+
+**What was implemented:**
+- New `modify_table_structure` MCP tool to add/delete rows and columns from existing tables
+- ModifyTableStructureInput struct with: presentation_id, object_id, action, index, count, insert_after
+- ModifyTableStructureOutput struct with: object_id, action, index, count, new_rows, new_columns
+- Four actions supported: add_row, delete_row, add_column, delete_column (case-insensitive)
+- Uses `InsertTableRowsRequest`, `DeleteTableRowRequest`, `InsertTableColumnsRequest`, `DeleteTableColumnRequest` in BatchUpdate
+- 0-based indexing for row/column positions
+- `insert_after` parameter for add actions (default true = insert below/right)
+- Validates table has at least 1 row and 1 column after deletion
+- Delete operations performed in reverse order (highest index first) to avoid shifting issues
+- Helper `findTableByID` to locate tables anywhere in presentation (slides, layouts, masters, groups)
+- Comprehensive test suite with 32 test cases
+
+**Files changed:**
+- `internal/tools/modify_table_structure.go` - Tool implementation with sentinel errors, action normalization, validation
+- `internal/tools/modify_table_structure_test.go` - Comprehensive tests (add/delete rows/columns, multiple items, insert_after, validation errors, API errors, helper function tests)
+- `CLAUDE.md` - Added modify_table_structure documentation with actions table, features, sentinel errors, usage patterns
+- `README.md` - Added modify_table_structure tool documentation with input/output examples, actions, errors
+- `stories.yaml` - Marked US-00043 as passes: true
+
+**Learnings:**
+- InsertTableRowsRequest uses `InsertBelow` boolean and `Number` for count (not multiple requests)
+- InsertTableColumnsRequest uses `InsertRight` boolean and `Number` for count
+- DeleteTableRowRequest and DeleteTableColumnRequest must be sent individually per row/column
+- Delete operations must be done from highest index to lowest to avoid index shifting
+- CellLocation uses `RowIndex` or `ColumnIndex` depending on operation (not both)
+- Google Slides API requires CellLocation for both insert and delete operations
+- Pattern: create helper function to find specific object types (findTableByID) by reusing findElementByID
+- Table dimensions retrieved from len(table.TableRows) and len(table.TableRows[0].TableCells)
+
+**Remaining issues:** None
+
+---

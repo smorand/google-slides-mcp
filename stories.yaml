@@ -1063,7 +1063,7 @@
   - Tool deletes columns
   - Index positions are respected
   - 'Command: go test ./internal/tools/... -run TestModifyTableStructure passes'
-  passes: false
+  passes: true
 - id: US-00044
   title: Implement tool to merge table cells
   priority: 11

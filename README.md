@@ -3195,6 +3195,137 @@ Create a single-cell table:
 
 ---
 
+#### `modify_table_structure`
+
+Add or remove rows/columns from an existing table.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "table_xyz123",
+  "action": "add_row",
+  "index": 1,
+  "count": 1,
+  "insert_after": true
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | Object ID of the table to modify |
+| `action` | string | Yes | Action to perform: `add_row`, `delete_row`, `add_column`, `delete_column` |
+| `index` | integer | Yes | 0-based index where to add/which to delete |
+| `count` | integer | No | Number of rows/columns to add/delete (default: 1) |
+| `insert_after` | boolean | No | For add actions: insert after index (default: true) |
+
+**Output:**
+```json
+{
+  "object_id": "table_xyz123",
+  "action": "add_row",
+  "index": 1,
+  "count": 1,
+  "new_rows": 4,
+  "new_columns": 3
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The modified table's object ID |
+| `action` | string | The action performed (normalized lowercase) |
+| `index` | integer | The index used for the operation |
+| `count` | integer | Number of rows/columns added/deleted |
+| `new_rows` | integer | Updated row count after modification |
+| `new_columns` | integer | Updated column count after modification |
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `add_row` | Adds row(s) at the specified index |
+| `delete_row` | Deletes row(s) starting at the specified index |
+| `add_column` | Adds column(s) at the specified index |
+| `delete_column` | Deletes column(s) starting at the specified index |
+
+**Features:**
+- Action names are case-insensitive (add_row, ADD_ROW both work)
+- Index is 0-based (first row/column is index 0)
+- For add actions, `insert_after` controls position:
+  - `true` (default): Insert after the index (below for rows, right for columns)
+  - `false`: Insert before the index (above for rows, left for columns)
+- For delete actions, deletes starting from index and continuing for count items
+- Validates that table has at least 1 row and 1 column after deletion
+
+**Use Cases:**
+- Expanding tables with new data rows
+- Adding header rows to existing tables
+- Removing empty rows/columns
+- Restructuring table layouts
+- Dynamic table resizing based on content
+
+**Examples:**
+
+Add a single row after row index 1:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "add_row",
+  "index": 1
+}
+```
+
+Add 3 columns to the right of column index 0:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "add_column",
+  "index": 0,
+  "count": 3
+}
+```
+
+Add row above index 0 (at the beginning):
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "add_row",
+  "index": 0,
+  "insert_after": false
+}
+```
+
+Delete 2 rows starting at index 1:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "delete_row",
+  "index": 1,
+  "count": 2
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid object ID: object_id is required` - Empty object ID
+- `invalid table action: action must be 'add_row', 'delete_row', 'add_column', or 'delete_column'` - Invalid action
+- `invalid table index: index must be non-negative` - Negative index
+- `count must be at least 1` - Invalid count
+- `invalid table index: row/column index X is out of range` - Index out of bounds
+- `cannot delete all rows/columns` - Would leave table with 0 rows or columns
+- `object is not a table` - Object ID doesn't refer to a table
+- `object not found` - Table object ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to modify table structure` - API error during modification
+
+---
+
 #### `create_line`
 
 Create a line or arrow on a slide.
@@ -3729,6 +3860,7 @@ Delete with both (all unique IDs):
 ---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
+- `modify_table_structure` - Add/remove rows and columns from tables
 
 ### Styling and Themes
 - `apply_theme` - Apply presentation themes
