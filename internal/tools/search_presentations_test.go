@@ -20,6 +20,7 @@ type mockDriveService struct {
 	UploadFileFunc     func(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error)
 	MakeFilePublicFunc func(ctx context.Context, fileID string) error
 	ListCommentsFunc   func(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)
+	CreateCommentFunc  func(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error)
 }
 
 func (m *mockDriveService) ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error) {
@@ -69,6 +70,13 @@ func (m *mockDriveService) ListComments(ctx context.Context, fileID string, incl
 		return m.ListCommentsFunc(ctx, fileID, includeDeleted, pageSize, pageToken)
 	}
 	return &drive.CommentList{Comments: []*drive.Comment{}}, nil // Default to empty list
+}
+
+func (m *mockDriveService) CreateComment(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error) {
+	if m.CreateCommentFunc != nil {
+		return m.CreateCommentFunc(ctx, fileID, comment)
+	}
+	return nil, errors.New("not implemented")
 }
 
 func TestSearchPresentations_Success(t *testing.T) {

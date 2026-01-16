@@ -1414,7 +1414,7 @@
   - Comment can be anchored to slide
   - Returns comment_id
   - 'Command: go test ./internal/tools/... -run TestAddComment passes'
-  passes: false
+  passes: true
 - id: US-00058
   title: Implement tool to reply/resolve/delete comment
   priority: 17

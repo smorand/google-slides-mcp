@@ -4651,6 +4651,92 @@ for _, comment := range output.Comments {
 }
 ```
 
+### add_comment Tool (`add_comment.go`)
+Adds a comment to a presentation with optional anchoring to a specific object or slide.
+
+**Input:**
+```go
+tools.AddCommentInput{
+    PresentationID:  "presentation-id",  // Required
+    Content:         "Comment text",     // Required - the comment content
+    AnchorObjectID:  "shape-xyz",        // Optional - anchor to specific object by ID
+    AnchorPageIndex: &pageIndex,         // Optional - anchor to specific slide (0-based index)
+}
+```
+
+**Output:**
+```go
+tools.AddCommentOutput{
+    CommentID:      "comment-123",           // The created comment's ID
+    PresentationID: "presentation-id",
+    Content:        "Comment text",
+    AnchorInfo:     "{\"r\":\"content\",...}", // Optional - JSON anchor details (if anchored)
+    CreatedTime:    "2024-01-15T10:00:00Z",    // Optional
+}
+```
+
+**Anchor Behavior:**
+- If `anchor_object_id` is provided, comment is anchored to that object
+- If `anchor_page_index` is provided (and no object anchor), comment is anchored to that slide
+- If both are provided, `anchor_object_id` takes precedence
+- If neither is provided, comment is added to the presentation without specific anchor
+- Page index is 0-based (converted to 1-based page number in Drive API anchor format)
+
+**Anchor JSON Format:**
+- Object anchor: `{"r":"content","a":[{"n":"objectId","v":"<object_id>"}]}`
+- Page anchor: `{"r":"content","a":[{"n":"pageNumber","v":"<page_number>"}]}`
+
+**Features:**
+- Creates comments via Drive API (comments are managed by Drive, not Slides API)
+- Supports anchoring to specific objects (shapes, images, etc.) by object ID
+- Supports anchoring to specific slides by 0-based page index
+- Returns the created comment's ID for future reference
+- Includes created timestamp in output
+
+**Sentinel Errors:**
+```go
+tools.ErrAddCommentFailed      // Generic comment creation failure
+tools.ErrInvalidCommentText    // Comment content is required (empty content)
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to comment
+tools.ErrDriveAPIError         // Drive API errors
+```
+
+**Usage Pattern:**
+```go
+// Add simple comment without anchor
+output, err := tools.AddComment(ctx, tokenSource, tools.AddCommentInput{
+    PresentationID: "abc123",
+    Content:        "This looks great!",
+})
+
+// Add comment anchored to specific object
+output, err := tools.AddComment(ctx, tokenSource, tools.AddCommentInput{
+    PresentationID: "abc123",
+    Content:        "Please update this chart",
+    AnchorObjectID: "chart-xyz",
+})
+
+// Add comment anchored to first slide (page index 0)
+pageIndex := 0
+output, err := tools.AddComment(ctx, tokenSource, tools.AddCommentInput{
+    PresentationID:  "abc123",
+    Content:         "Title slide needs work",
+    AnchorPageIndex: &pageIndex,
+})
+
+// Add comment anchored to third slide (page index 2)
+pageIndex := 2
+output, err := tools.AddComment(ctx, tokenSource, tools.AddCommentInput{
+    PresentationID:  "abc123",
+    Content:         "Consider adding more visuals",
+    AnchorPageIndex: &pageIndex,
+})
+
+fmt.Printf("Created comment: %s\n", output.CommentID)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
@@ -4664,6 +4750,7 @@ type DriveService interface {
     UploadFile(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error)
     MakeFilePublic(ctx context.Context, fileID string) error
     ListComments(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)
+    CreateComment(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error)
 }
 
 // Factory pattern

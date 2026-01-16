@@ -4844,6 +4844,61 @@ List all comments in a presentation with replies and anchor information.
 - `drive API error` - Other Drive API errors
 
 ---
+
+#### `add_comment`
+
+Add a comment to a presentation with optional anchoring to a specific object or slide.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "content": "This slide needs more work",
+  "anchor_object_id": "shape-xyz",
+  "anchor_page_index": 2
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `content` | string | Yes | The comment text content |
+| `anchor_object_id` | string | No | Object ID to anchor the comment to |
+| `anchor_page_index` | integer | No | Slide index (0-based) to anchor the comment to |
+
+**Output:**
+```json
+{
+  "comment_id": "AAAABxyz",
+  "presentation_id": "abc123xyz",
+  "content": "This slide needs more work",
+  "anchor_info": "{\"r\":\"content\",\"a\":[{\"n\":\"objectId\",\"v\":\"shape-xyz\"}]}",
+  "created_time": "2024-01-15T10:00:00Z"
+}
+```
+
+**Anchor Behavior:**
+- If `anchor_object_id` is provided, comment is anchored to that object
+- If `anchor_page_index` is provided (and no object anchor), comment is anchored to that slide
+- If both are provided, `anchor_object_id` takes precedence
+- If neither is provided, comment is added to the presentation without specific anchor
+- Page index is 0-based (slide 1 = index 0, slide 2 = index 1, etc.)
+
+**Features:**
+- Creates comments via Drive API (comments are managed by Drive, not Slides API)
+- Supports anchoring to specific objects (shapes, images, etc.) by object ID
+- Supports anchoring to specific slides by 0-based page index
+- Returns the created comment's ID for future reference
+- Includes created timestamp in output
+
+**Errors:**
+- `comment content is required` - Empty content provided
+- `presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to comment on the presentation
+- `drive API error` - Other Drive API errors
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 - `modify_table_structure` - Add/remove rows and columns from tables
@@ -4862,6 +4917,7 @@ List all comments in a presentation with replies and anchor information.
 
 ### Collaboration
 - `list_comments` - List all comments in a presentation with replies and anchor info
+- `add_comment` - Add a comment to a presentation with optional object/slide anchoring
 
 ## Configuration
 

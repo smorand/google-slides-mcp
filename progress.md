@@ -2031,3 +2031,85 @@ Animations can only be managed through the Google Slides UI (View > Motion or In
 - Replies are nested in each Comment object with their own Author info
 
 **Remaining issues:** None
+
+---
+
+## 2026-01-16 - US-00057 - Implement tool to add comment
+
+**Status:** Success
+
+**What was implemented:**
+- Created `add_comment` tool to add comments to presentations via Drive API
+- Input parameters:
+  - `presentation_id` (required): The Google Slides presentation ID
+  - `content` (required): The comment text content
+  - `anchor_object_id` (optional): Object ID to anchor the comment to
+  - `anchor_page_index` (optional): Slide index (0-based) to anchor the comment to
+- Anchor behavior:
+  - If `anchor_object_id` is provided, comment is anchored to that object
+  - If only `anchor_page_index` is provided, comment is anchored to that slide
+  - If both are provided, `anchor_object_id` takes precedence
+  - Page index is converted from 0-based input to 1-based page number in anchor format
+- Output includes: comment_id, presentation_id, content, anchor_info (JSON), created_time
+- Uses Google Drive anchor JSON format:
+  - Object: `{"r":"content","a":[{"n":"objectId","v":"<id>"}]}`
+  - Page: `{"r":"content","a":[{"n":"pageNumber","v":"<number>"}]}`
+
+**Files changed:**
+
+- `internal/tools/add_comment.go` - New file:
+  - AddCommentInput and AddCommentOutput structs
+  - AddComment method on Tools struct
+  - Sentinel errors: ErrAddCommentFailed, ErrInvalidCommentText
+  - Builds anchor JSON from input parameters
+  - Creates comment via DriveService.CreateComment
+
+- `internal/tools/add_comment_test.go` - New file with 14 test cases:
+  - adds_comment_to_presentation_successfully: basic happy path
+  - comment_can_be_anchored_to_object: objectId anchor format
+  - comment_can_be_anchored_to_slide: pageNumber anchor format
+  - comment_can_be_anchored_to_first_slide_(page_0): edge case for page 0
+  - object_anchor_takes_precedence_over_page_anchor: precedence behavior
+  - returns_comment_id: verifies output structure
+  - returns_error_for_empty_presentation_ID: validation
+  - returns_error_for_empty_content: validation
+  - returns_error_when_presentation_not_found: 404 handling
+  - returns_error_when_access_denied: 403 handling
+  - returns_error_when_drive_service_fails: API error handling
+  - returns_error_when_drive_service_factory_fails: factory error handling
+  - no_anchor_when_neither_object_nor_page_specified: no anchor behavior
+  - returns_presentation_ID_in_output: verifies output structure
+
+- `internal/tools/tools.go` - Extended DriveService interface:
+  - Added `CreateComment(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error)` method
+  - Added implementation in realDriveService using Drive API v3 Comments.Create
+  - Fields returned: id, kind, content, htmlContent, author, createdTime, modifiedTime, resolved, deleted, anchor
+
+- `internal/tools/search_presentations_test.go` - Updated mockDriveService:
+  - Added CreateCommentFunc field for mocking
+  - Added CreateComment method implementation
+
+- `CLAUDE.md` - Added add_comment documentation:
+  - Input/output examples
+  - Anchor behavior explanation
+  - Anchor JSON format reference
+  - Features, sentinel errors, usage patterns
+  - Updated DriveService interface to include CreateComment
+
+- `README.md` - Added add_comment documentation:
+  - Detailed tool documentation with JSON examples
+  - Parameter table with descriptions
+  - Anchor behavior section
+  - Features and error descriptions
+  - Added to Collaboration section in tool summary
+
+- `stories.yaml` - Marked US-00057 as passes: true
+
+**Learnings:**
+- Comments are created via Drive API Comments.Create (not Slides API)
+- Google Drive anchor format uses JSON with "r" (root) and "a" (attributes) fields
+- Page numbers in anchor format are 1-based, while input is 0-based
+- Object anchors and page anchors use different attribute names: "objectId" vs "pageNumber"
+- CreateComment returns fields specified in Fields parameter, matching pattern from ListComments
+
+**Remaining issues:** None
