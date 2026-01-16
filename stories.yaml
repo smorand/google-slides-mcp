@@ -1551,7 +1551,7 @@
   - Max retries limit is respected
   - Jitter is applied
   - 'Command: go test ./internal/retry/... passes'
-  passes: false
+  passes: true
 - id: US-00063
   title: Implement caching layer
   priority: 20

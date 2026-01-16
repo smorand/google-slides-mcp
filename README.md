@@ -289,6 +289,36 @@ Rate limits can be configured per-endpoint for different use cases:
 - Read operations: Higher limits
 - Authentication endpoints: Separate limits
 
+## Retry Logic
+
+The server implements automatic retry logic with exponential backoff for handling transient failures from Google APIs.
+
+### Exponential Backoff
+- Initial delay: 1 second
+- Maximum delay: 16 seconds
+- Multiplier: 2x (delays double after each retry)
+- Maximum retries: 5 attempts
+
+### Jitter
+Random jitter (±20%) is applied to delays to prevent thundering herd problems when multiple requests fail simultaneously.
+
+### Retryable Status Codes
+The following HTTP status codes trigger automatic retry:
+
+| Status Code | Description |
+|-------------|-------------|
+| 429 | Too Many Requests (rate limited) |
+| 500 | Internal Server Error |
+| 502 | Bad Gateway |
+| 503 | Service Unavailable |
+| 504 | Gateway Timeout |
+
+### Behavior
+- Retries happen automatically for transient errors
+- Context cancellation is respected during retry delays
+- Non-retryable errors (4xx except 429) fail immediately
+- Detailed logging for debugging retry behavior
+
 ## Available MCP Tools
 
 The server provides comprehensive tools for Google Slides manipulation:

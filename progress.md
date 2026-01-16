@@ -2372,3 +2372,58 @@ Implemented the `translate_presentation` MCP tool that translates text in a Goog
 **Test Results:** All 10 batch_update tests pass
 
 **Remaining issues:** None
+
+## US-00062: Implement retry logic with exponential backoff
+
+**Files Created/Modified:**
+- `internal/retry/retry.go` - Main implementation (~342 lines):
+  - Package providing automatic retry logic with exponential backoff and jitter
+  - Config struct with MaxRetries, InitialDelay, MaxDelay, Multiplier, JitterFactor, RetryableStatusCodes, Logger
+  - DefaultConfig() returns sensible defaults (5 retries, 1s initial, 16s max, 2.0 multiplier, 0.2 jitter)
+  - Retryer struct with configuration and status code lookup map
+  - RetryableError type that wraps errors with status code and attempt info
+  - IsRetryable() method checks if status code triggers retry
+  - CalculateDelay() implements exponential backoff with jitter
+  - Do() executes operations with retry logic
+  - DoWithResult[T]() generic function for operations returning typed results
+  - Config getters for inspection (MaxRetries, InitialDelay, MaxDelay, Multiplier, JitterFactor, RetryableStatusCodes)
+
+- `internal/retry/retry_test.go` - Comprehensive test suite (~345 lines):
+  - TestDefaultConfig - Validates default configuration values
+  - TestNew - Default values, provided configuration, invalid jitter factor handling
+  - TestRetryer_IsRetryable - All retryable status codes (429, 500, 502, 503, 504) and non-retryable codes
+  - TestRetryer_CalculateDelay - Zero attempts, exponential backoff with tolerance, jitter range verification
+  - TestRetryer_Do - First attempt success, 429/500/503 retry scenarios, max retries, non-retryable errors, context cancellation, exponential backoff intervals
+  - TestDoWithResult - Success, retry with result, max retries error
+  - TestRetryableError - Error message, Unwrap, errors.Is support
+  - TestRetryer_RetryableStatusCodes - Returns configured codes
+
+- `CLAUDE.md` - Added Retry Package documentation:
+  - Configuration options with example code
+  - Backoff algorithm explanation
+  - Sentinel errors
+  - RetryableError type definition
+  - Usage patterns for Do() and DoWithResult()
+  - Config getters list
+
+- `README.md` - Added Retry Logic section:
+  - Exponential backoff parameters
+  - Jitter explanation
+  - Retryable status codes table
+  - Behavior description
+
+- `stories.yaml` - Marked US-00062 as passes: true
+
+**Learnings:**
+- Exponential backoff formula: `delay = initialDelay * multiplier^(attempt-1)`
+- Jitter applied as: `delay * (1 - jitterFactor + random(0, 2*jitterFactor))`
+- JitterFactor <= 0 should default to 0.2 (not just < 0) to ensure jitter is applied with empty config
+- Use tolerance-based assertions for timing tests with jitter (1% tolerance works well)
+- Use very small jitter (0.001) for near-deterministic tests
+- Generic DoWithResult[T] uses receiver on Retryer but takes function as parameter for type inference
+- Context cancellation check should happen both before operation and during delay wait
+- RetryableError should implement Unwrap() for errors.Is and errors.As compatibility
+
+**Test Results:** All 16 retry tests pass (8 test functions with sub-tests)
+
+**Remaining issues:** None

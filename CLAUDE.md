@@ -495,6 +495,97 @@ limit := limiter.GlobalLimit()
 rate := limiter.GlobalRate()
 ```
 
+## Retry Package
+
+The `internal/retry/` package provides automatic retry logic with exponential backoff and jitter for handling transient failures when calling external APIs.
+
+### Retryer (`retry.go`)
+- Exponential backoff with configurable initial delay, max delay, and multiplier
+- Jitter factor for preventing thundering herd problem
+- Configurable retryable status codes (default: 429, 500, 502, 503, 504)
+- Context-aware with cancellation support
+- Generic `DoWithResult[T]` function for typed returns
+
+### Configuration
+```go
+retry.Config{
+    MaxRetries:           5,                // Maximum retry attempts
+    InitialDelay:         1 * time.Second,  // Initial delay before first retry
+    MaxDelay:             16 * time.Second, // Maximum delay between retries
+    Multiplier:           2.0,              // Backoff multiplier
+    JitterFactor:         0.2,              // Jitter factor (0.0 to 1.0)
+    RetryableStatusCodes: []int{429, 500, 502, 503, 504},
+    Logger:               slog.Default(),
+}
+```
+
+### Backoff Algorithm
+- Delay for attempt N: `initialDelay * multiplier^(N-1)`
+- Capped at MaxDelay
+- Jitter applied: `delay * (1 - jitterFactor + random(0, 2*jitterFactor))`
+
+### Sentinel Errors
+```go
+retry.ErrMaxRetriesExceeded  // All retry attempts exhausted
+retry.ErrNonRetryable        // Error is not retryable
+```
+
+### RetryableError Type
+```go
+type RetryableError struct {
+    StatusCode int    // HTTP status code
+    Err        error  // Underlying error
+    Attempt    int    // Attempt number when error occurred
+}
+```
+
+### Usage Pattern
+```go
+// Create retryer with default config
+retryer := retry.New(retry.DefaultConfig())
+
+// Or with custom config
+retryer := retry.New(retry.Config{
+    MaxRetries:   3,
+    InitialDelay: 500 * time.Millisecond,
+    MaxDelay:     8 * time.Second,
+    Multiplier:   2.0,
+    JitterFactor: 0.2,
+})
+
+// Execute operation with retry
+err := retryer.Do(ctx, func(ctx context.Context) (int, error) {
+    resp, err := httpClient.Do(req)
+    if err != nil {
+        return 0, err
+    }
+    if resp.StatusCode >= 400 {
+        return resp.StatusCode, fmt.Errorf("request failed: %d", resp.StatusCode)
+    }
+    return resp.StatusCode, nil
+})
+
+// Execute operation with retry and return result
+result, err := retry.DoWithResult(ctx, retryer, func(ctx context.Context) (*Response, int, error) {
+    resp, err := client.Call(ctx, request)
+    if err != nil {
+        return nil, 500, err
+    }
+    return resp, 200, nil
+})
+```
+
+### Config Getters
+```go
+retryer.MaxRetries()           // Maximum retry attempts
+retryer.InitialDelay()         // Initial delay duration
+retryer.MaxDelay()             // Maximum delay duration
+retryer.Multiplier()           // Backoff multiplier
+retryer.JitterFactor()         // Jitter factor
+retryer.RetryableStatusCodes() // List of retryable status codes
+retryer.IsRetryable(429)       // Check if status code is retryable
+```
+
 ## Tools Package
 
 The `internal/tools/` package implements MCP tools for Google Slides operations:
