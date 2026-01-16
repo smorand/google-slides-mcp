@@ -1454,3 +1454,41 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00044 - Implement tool to merge table cells
+
+**Status:** Success
+
+**What was implemented:**
+- New `merge_cells` MCP tool to merge or unmerge cells in a table
+- MergeCellsInput struct with: presentation_id, object_id, action, start_row, start_column, end_row, end_column (for merge), row, column (for unmerge)
+- MergeCellsOutput struct with: object_id, action, range (human-readable description)
+- Two actions supported: merge, unmerge (case-insensitive)
+- For merge: uses 0-based indices with exclusive end (like Python slicing)
+- For unmerge: specifies any cell position within a merged cell
+- Uses `MergeTableCellsRequest` and `UnmergeTableCellsRequest` in BatchUpdate
+- Validates range is within table bounds
+- Validates merge range spans at least 2 cells (single cell is invalid)
+- Reuses `findTableByID` helper from modify_table_structure.go
+- Sentinel errors: ErrMergeCellsFailed, ErrUnmergeCellsFailed, ErrInvalidMergeAction, ErrInvalidMergeRange
+- Helper functions: validateMergeRange, validateUnmergePosition
+- Comprehensive test suite with 41 test cases (24 main tests, 10 merge range validation, 7 unmerge position validation)
+
+**Files changed:**
+- `internal/tools/merge_cells.go` - Tool implementation with sentinel errors, action normalization, range validation
+- `internal/tools/merge_cells_test.go` - Comprehensive tests (merge 2x2, merge row/column, unmerge, case-insensitivity, validation errors, API errors, helper function tests)
+- `CLAUDE.md` - Added merge_cells documentation with actions table, features, sentinel errors, usage patterns
+- `README.md` - Added merge_cells tool documentation with input/output examples, actions, errors
+- `stories.yaml` - Marked US-00044 as passes: true
+
+**Learnings:**
+- MergeTableCellsRequest uses TableRange with Location (TableCellLocation), RowSpan, and ColumnSpan
+- UnmergeTableCellsRequest also uses TableRange - setting span to 1x1 unmerges any merged cell containing that position
+- TableCellLocation uses 0-based RowIndex and ColumnIndex
+- Range validation pattern: start >= 0, end > start, end <= table size, span >= 2 cells
+- Position validation pattern: index >= 0, index < table dimension
+- Reused test helper createPresentationWithTable from modify_table_structure_test.go pattern
+
+**Remaining issues:** None
+
+---

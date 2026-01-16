@@ -3326,6 +3326,143 @@ Delete 2 rows starting at index 1:
 
 ---
 
+#### `merge_cells`
+
+Merge or unmerge cells in a table.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "table_xyz123",
+  "action": "merge",
+  "start_row": 0,
+  "start_column": 0,
+  "end_row": 2,
+  "end_column": 2
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | Object ID of the table |
+| `action` | string | Yes | Action to perform: `merge` or `unmerge` |
+| `start_row` | integer | For merge | 0-based starting row index |
+| `start_column` | integer | For merge | 0-based starting column index |
+| `end_row` | integer | For merge | 0-based ending row index (exclusive) |
+| `end_column` | integer | For merge | 0-based ending column index (exclusive) |
+| `row` | integer | For unmerge | 0-based row index of merged cell |
+| `column` | integer | For unmerge | 0-based column index of merged cell |
+
+**Output:**
+```json
+{
+  "object_id": "table_xyz123",
+  "action": "merge",
+  "range": "rows 0-1, columns 0-1"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The table's object ID |
+| `action` | string | The action performed (normalized lowercase) |
+| `range` | string | Human-readable description of the affected range |
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `merge` | Merges cells in the specified rectangular range |
+| `unmerge` | Unmerges a previously merged cell at the specified position |
+
+**Features:**
+- Action names are case-insensitive (merge, MERGE both work)
+- For merge: uses 0-based indices with exclusive end (like Python slicing)
+- For unmerge: specifies any cell position within a merged cell
+- Validates range is within table bounds
+- Validates merge range spans at least 2 cells
+
+**Use Cases:**
+- Creating table headers that span multiple columns
+- Merging cells for category labels
+- Creating complex table layouts with merged regions
+- Unmerging previously merged cells for restructuring
+
+**Examples:**
+
+Merge a 2x2 range of cells:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "merge",
+  "start_row": 0,
+  "start_column": 0,
+  "end_row": 2,
+  "end_column": 2
+}
+```
+
+Merge an entire row (row 0, all 4 columns):
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "merge",
+  "start_row": 0,
+  "start_column": 0,
+  "end_row": 1,
+  "end_column": 4
+}
+```
+
+Merge an entire column (column 0, all 3 rows):
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "merge",
+  "start_row": 0,
+  "start_column": 0,
+  "end_row": 3,
+  "end_column": 1
+}
+```
+
+Unmerge a merged cell at position (1, 2):
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "action": "unmerge",
+  "row": 1,
+  "column": 2
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid object ID: object_id is required` - Empty object ID
+- `invalid merge action: action must be 'merge' or 'unmerge'` - Invalid action
+- `invalid merge range: start indices must be non-negative` - Negative start indices
+- `invalid merge range: end_row must be greater than start_row` - Invalid row range
+- `invalid merge range: end_column must be greater than start_column` - Invalid column range
+- `invalid merge range: end_row X exceeds table row count Y` - Row out of bounds
+- `invalid merge range: end_column X exceeds table column count Y` - Column out of bounds
+- `invalid merge range: merge range must span at least 2 cells` - Single cell range
+- `invalid merge range: row and column indices must be non-negative` - Negative unmerge indices
+- `invalid merge range: row X is out of range` - Unmerge row out of bounds
+- `invalid merge range: column X is out of range` - Unmerge column out of bounds
+- `object is not a table` - Object ID doesn't refer to a table
+- `object not found` - Table object ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to merge cells` - API error during merge
+- `failed to unmerge cells` - API error during unmerge
+
+---
+
 #### `create_line`
 
 Create a line or arrow on a slide.
@@ -3861,6 +3998,7 @@ Delete with both (all unique IDs):
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 - `modify_table_structure` - Add/remove rows and columns from tables
+- `merge_cells` - Merge or unmerge table cells
 
 ### Styling and Themes
 - `apply_theme` - Apply presentation themes

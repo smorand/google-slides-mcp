@@ -2854,6 +2854,112 @@ output, err := tools.ModifyTableStructure(ctx, tokenSource, tools.ModifyTableStr
 fmt.Printf("Table now has %d rows and %d columns\n", output.NewRows, output.NewColumns)
 ```
 
+### merge_cells Tool (`merge_cells.go`)
+Merges or unmerges cells in a table.
+
+**Input:**
+```go
+tools.MergeCellsInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "table-object-id",  // Required - ID of the table
+    Action:         "merge",            // Required: "merge" or "unmerge"
+
+    // For 'merge' action - defines the rectangular range to merge
+    StartRow:    0,  // 0-based starting row index
+    StartColumn: 0,  // 0-based starting column index
+    EndRow:      2,  // 0-based ending row index (exclusive)
+    EndColumn:   2,  // 0-based ending column index (exclusive)
+
+    // For 'unmerge' action - position of a merged cell to unmerge
+    Row:    1,  // 0-based row index of merged cell
+    Column: 0,  // 0-based column index of merged cell
+}
+```
+
+**Output:**
+```go
+tools.MergeCellsOutput{
+    ObjectID: "table-object-id",         // The table's ID
+    Action:   "merge",                   // The action performed (normalized lowercase)
+    Range:    "rows 0-1, columns 0-1",   // Description of the affected range
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `merge` | Merges cells in the specified rectangular range |
+| `unmerge` | Unmerges a previously merged cell at the specified position |
+
+**Features:**
+- Action names are case-insensitive (merge, MERGE both work)
+- For merge: uses 0-based indices with exclusive end (like Python slicing)
+- For unmerge: specifies any cell position within a merged cell
+- Validates range is within table bounds
+- Validates merge range spans at least 2 cells
+- Uses MergeTableCellsRequest and UnmergeTableCellsRequest in Slides API BatchUpdate
+
+**Sentinel Errors:**
+```go
+tools.ErrMergeCellsFailed   // Generic merge failure
+tools.ErrUnmergeCellsFailed // Generic unmerge failure
+tools.ErrInvalidMergeAction // Invalid action (not "merge" or "unmerge")
+tools.ErrInvalidMergeRange  // Invalid range (negative indices, out of bounds, single cell)
+tools.ErrNotATable          // Object is not a table
+tools.ErrObjectNotFound     // Table object ID not found in presentation
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Merge a 2x2 range of cells (rows 0-1, columns 0-1)
+output, err := tools.MergeCells(ctx, tokenSource, tools.MergeCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "merge",
+    StartRow:       0,
+    StartColumn:    0,
+    EndRow:         2,
+    EndColumn:      2,
+})
+
+// Merge an entire row (row 0, all columns in a 4-column table)
+output, err := tools.MergeCells(ctx, tokenSource, tools.MergeCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "merge",
+    StartRow:       0,
+    StartColumn:    0,
+    EndRow:         1,
+    EndColumn:      4,
+})
+
+// Merge an entire column (column 0, all rows in a 3-row table)
+output, err := tools.MergeCells(ctx, tokenSource, tools.MergeCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "merge",
+    StartRow:       0,
+    StartColumn:    0,
+    EndRow:         3,
+    EndColumn:      1,
+})
+
+// Unmerge a merged cell at position (1, 2)
+output, err := tools.MergeCells(ctx, tokenSource, tools.MergeCellsInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Action:         "unmerge",
+    Row:            1,
+    Column:         2,
+})
+
+fmt.Printf("Action: %s, Range: %s\n", output.Action, output.Range)
+```
+
 ### create_line Tool (`create_line.go`)
 Creates a line or arrow on a slide.
 

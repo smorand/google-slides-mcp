@@ -1088,7 +1088,7 @@
   - Content from first cell is preserved on merge
   - Unmerge distributes content to first cell only
   - 'Command: go test ./internal/tools/... -run TestMergeCells passes'
-  passes: false
+  passes: true
 - id: US-00045
   title: Implement tool to modify table cell content
   priority: 11
