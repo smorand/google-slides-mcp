@@ -1690,3 +1690,46 @@ Implemented `apply_theme` MCP tool that copies theme colors from one presentatio
 - Batch update targets the master slide's ObjectId, not the presentation ID
 
 **Remaining issues:** None
+
+---
+
+## US-00050: Implement tool to set slide background
+
+**Status:** ✅ Completed
+
+**Implementation Summary:**
+Implemented `set_background` MCP tool that sets the background for one or all slides. Supports three background types: solid color, image, and gradient.
+
+**Key Implementation Details:**
+- Input: presentation_id, scope ("slide" or "all"), background_type ("solid", "image", "gradient")
+- For solid: color (hex string)
+- For image: image_base64 (uploaded to Drive, then referenced as StretchedPictureFill)
+- For gradient: start_color, end_color, angle (0-360 degrees)
+- Scope "slide" requires slide_index (1-based) OR slide_id
+- Uses UpdatePagePropertiesRequest with pageBackgroundFill field
+- For solid backgrounds: uses SolidFill with parsed RGB color
+- For image backgrounds: uploads to Drive, makes public, uses StretchedPictureFill with URL
+- For gradients: generates PNG image programmatically (API doesn't support native gradients), uploads to Drive, uses StretchedPictureFill
+- PNG generation implemented without external dependencies (manual IHDR, IDAT, IEND chunks, zlib compression)
+- Gradient generation supports any angle with proper color interpolation
+- Returns success status, affected slide count, and background type applied
+- Sentinel errors: ErrSetBackgroundFailed, ErrInvalidBackgroundType, ErrInvalidBackgroundScope (reuses ErrInvalidScope), ErrMissingBackgroundColor, ErrMissingGradientColors, ErrInvalidGradientAngle
+
+**Files changed:**
+- `internal/tools/set_background.go` - Tool implementation with SetBackgroundInput/SetBackgroundOutput structs, solid/image/gradient handlers, PNG generation helpers (encodePNG, writeChunk, crc32PNG, compressZlib, deflateStore, adler32, generateGradientImage)
+- `internal/tools/set_background_test.go` - Comprehensive tests (25+ test cases: solid color single/all slides, image background, gradient single/all slides, by slide ID, validation errors, API errors, case-insensitivity, helper function tests)
+- `CLAUDE.md` - Added set_background documentation with input/output examples, background types table, scope options, gradient angles, features, sentinel errors, usage patterns
+- `README.md` - Added set_background documentation with JSON input/output examples, parameter tables, background types, gradient angles, features, error messages
+- `stories.yaml` - Marked US-00050 as passes: true
+
+**Learnings:**
+- Google Slides API doesn't support native gradient backgrounds - workaround is to generate gradient image and use StretchedPictureFill
+- PNG format requires careful implementation of chunks (IHDR, IDAT, IEND), CRC32 checksums, and zlib compression
+- Zlib stream format: CMF byte (0x78), FLG byte (0x01 for no dict), deflate blocks, Adler-32 checksum
+- Deflate "store" method (non-compressed) is simplest: 5-byte header per block with length in little-endian
+- Gradient interpolation: calculate pixel position based on angle, interpolate colors linearly
+- StretchedPictureFill requires publicly accessible URL - must make uploaded Drive file public
+- Same findSlide helper pattern reused from other tools for slide selection
+- Drive service factory pattern allows easy mocking in tests
+
+**Remaining issues:** None

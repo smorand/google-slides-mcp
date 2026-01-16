@@ -1241,7 +1241,7 @@
   - Single slide scope works
   - All slides scope works
   - 'Command: go test ./internal/tools/... -run TestSetBackground passes'
-  passes: false
+  passes: true
 - id: US-00051
   title: Implement tool to configure slide footer
   priority: 13

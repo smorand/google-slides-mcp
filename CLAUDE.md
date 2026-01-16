@@ -3719,6 +3719,130 @@ fmt.Printf("Applied theme from %s to %s\n", output.SourceMasterID, output.Target
 fmt.Printf("Updated colors: %v\n", output.UpdatedProperties)
 ```
 
+### set_background Tool (`set_background.go`)
+Sets the background for one or all slides (solid color, image, or gradient).
+
+**Input:**
+```go
+tools.SetBackgroundInput{
+    PresentationID: "presentation-id",  // Required
+    Scope:          "slide",            // Required: "slide" or "all"
+    SlideIndex:     1,                  // 1-based index (required when scope is "slide", use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    BackgroundType: "solid",            // Required: "solid", "image", or "gradient"
+
+    // For solid background
+    Color: "#FF0000",                   // Hex color (required for "solid")
+
+    // For image background
+    ImageBase64: "base64-data...",      // Base64 encoded image (required for "image")
+
+    // For gradient background
+    StartColor: "#FF0000",              // Hex color for gradient start (required for "gradient")
+    EndColor:   "#0000FF",              // Hex color for gradient end (required for "gradient")
+    Angle:      &90.0,                  // Degrees (0-360), default 0 (left to right)
+}
+```
+
+**Output:**
+```go
+tools.SetBackgroundOutput{
+    Success:        true,
+    Message:        "Solid background (#FF0000) applied successfully to slide",
+    AffectedSlides: []string{"slide-1"},  // List of modified slide IDs
+}
+```
+
+**Background Types:**
+| Type | Description |
+|------|-------------|
+| `solid` | Single color fill, requires `color` parameter |
+| `image` | Stretched image fill, requires `image_base64` parameter |
+| `gradient` | Linear gradient fill, requires `start_color` and `end_color` parameters |
+
+**Scope Options:**
+| Scope | Description |
+|-------|-------------|
+| `slide` | Apply to single slide (requires `slide_index` or `slide_id`) |
+| `all` | Apply to all slides in the presentation |
+
+**Gradient Angles:**
+- 0° = Left to right
+- 90° = Top to bottom
+- 180° = Right to left
+- 270° = Bottom to top
+
+**Features:**
+- Scope and background_type are case-insensitive ("SOLID", "solid", "Solid" all work)
+- For image backgrounds, uploads image to Drive and uses StretchedPictureFill
+- For gradient backgrounds, generates a gradient PNG image and uses StretchedPictureFill
+  (Google Slides API doesn't support native gradient fills, so we use image workaround)
+- Automatically makes uploaded images publicly accessible for Slides API to read
+- Returns list of all affected slide IDs
+
+**Sentinel Errors:**
+```go
+tools.ErrSetBackgroundFailed    // Generic background setting failure
+tools.ErrInvalidBackgroundType  // Background type must be 'solid', 'image', or 'gradient'
+tools.ErrMissingBackgroundColor // Color is required for solid background
+tools.ErrMissingGradientColors  // start_color and end_color are required for gradient
+tools.ErrInvalidGradientAngle   // Gradient angle must be between 0 and 360
+tools.ErrInvalidScope           // Scope must be 'slide' or 'all'
+tools.ErrInvalidSlideReference  // slide_index or slide_id required when scope is 'slide'
+tools.ErrInvalidImageData       // Invalid image data (empty, invalid base64, or unknown format)
+tools.ErrImageUploadFailed      // Failed to upload image to Drive
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+tools.ErrDriveAPIError          // Drive API errors
+```
+
+**Usage Pattern:**
+```go
+// Set solid color background on single slide
+output, err := tools.SetBackground(ctx, tokenSource, tools.SetBackgroundInput{
+    PresentationID: "abc123",
+    Scope:          "slide",
+    SlideIndex:     1,
+    BackgroundType: "solid",
+    Color:          "#FF0000",
+})
+
+// Set solid color background on all slides
+output, err := tools.SetBackground(ctx, tokenSource, tools.SetBackgroundInput{
+    PresentationID: "abc123",
+    Scope:          "all",
+    BackgroundType: "solid",
+    Color:          "#00FF00",
+})
+
+// Set image background
+imageBase64 := base64.StdEncoding.EncodeToString(imageData)
+output, err := tools.SetBackground(ctx, tokenSource, tools.SetBackgroundInput{
+    PresentationID: "abc123",
+    Scope:          "slide",
+    SlideIndex:     1,
+    BackgroundType: "image",
+    ImageBase64:    imageBase64,
+})
+
+// Set gradient background (top to bottom, red to blue)
+angle := 90.0
+output, err := tools.SetBackground(ctx, tokenSource, tools.SetBackgroundInput{
+    PresentationID: "abc123",
+    Scope:          "slide",
+    SlideIndex:     1,
+    BackgroundType: "gradient",
+    StartColor:     "#FF0000",
+    EndColor:       "#0000FF",
+    Angle:          &angle,
+})
+
+fmt.Printf("Affected slides: %v\n", output.AffectedSlides)
+```
+
 ### transform_object Tool (`transform_object.go`)
 Moves, resizes, or rotates any object.
 

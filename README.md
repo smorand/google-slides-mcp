@@ -4212,6 +4212,120 @@ Copy theme from a template:
 
 ---
 
+#### `set_background`
+
+Set the background for one or all slides (solid color, image, or gradient).
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "scope": "slide",
+  "slide_index": 1,
+  "background_type": "solid",
+  "color": "#FF0000"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `scope` | string | Yes | "slide" for single slide, "all" for all slides |
+| `slide_index` | number | Conditional | 1-based slide index (required when scope is "slide") |
+| `slide_id` | string | Conditional | Alternative to slide_index |
+| `background_type` | string | Yes | "solid", "image", or "gradient" |
+| `color` | string | Conditional | Hex color for solid background (e.g., "#FF0000") |
+| `image_base64` | string | Conditional | Base64 encoded image data for image background |
+| `start_color` | string | Conditional | Hex color for gradient start |
+| `end_color` | string | Conditional | Hex color for gradient end |
+| `angle` | number | No | Gradient angle in degrees (0-360), default 0 |
+
+**Output:**
+```json
+{
+  "success": true,
+  "message": "Solid background (#FF0000) applied successfully to slide",
+  "affected_slides": ["slide-1"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the operation succeeded |
+| `message` | string | Human-readable result message |
+| `affected_slides` | array | List of slide IDs that were modified |
+
+**Background Types:**
+
+| Type | Description | Required Parameters |
+|------|-------------|---------------------|
+| `solid` | Single color fill | `color` |
+| `image` | Stretched image fill | `image_base64` |
+| `gradient` | Linear gradient fill | `start_color`, `end_color` |
+
+**Gradient Angles:**
+- 0° = Left to right (default)
+- 90° = Top to bottom
+- 180° = Right to left
+- 270° = Bottom to top
+
+**Features:**
+- Scope and background_type are case-insensitive
+- For image backgrounds, uploads image to Google Drive
+- For gradient backgrounds, generates gradient PNG (API workaround - native gradients not supported)
+- Automatically makes uploaded images publicly accessible
+
+**Examples:**
+
+Set solid color on single slide:
+```json
+{
+  "presentation_id": "abc123",
+  "scope": "slide",
+  "slide_index": 1,
+  "background_type": "solid",
+  "color": "#FF0000"
+}
+```
+
+Set solid color on all slides:
+```json
+{
+  "presentation_id": "abc123",
+  "scope": "all",
+  "background_type": "solid",
+  "color": "#00FF00"
+}
+```
+
+Set gradient background:
+```json
+{
+  "presentation_id": "abc123",
+  "scope": "slide",
+  "slide_index": 1,
+  "background_type": "gradient",
+  "start_color": "#FF0000",
+  "end_color": "#0000FF",
+  "angle": 90
+}
+```
+
+**Errors:**
+- `invalid background type` - Must be "solid", "image", or "gradient"
+- `scope must be 'slide' or 'all'` - Invalid scope value
+- `color is required for solid background` - Missing color for solid type
+- `start_color and end_color are required for gradient` - Missing gradient colors
+- `gradient angle must be between 0 and 360` - Invalid angle value
+- `slide_index or slide_id is required` - Missing slide reference when scope is "slide"
+- `invalid image data` - Invalid base64 or unknown image format
+- `failed to upload image` - Drive upload failed
+- `slide not found` - Slide index out of range or ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to modify
+
+---
+
 #### `transform_object`
 
 Move, resize, or rotate any object.
