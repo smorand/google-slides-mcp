@@ -1437,7 +1437,7 @@
   - Unresolve reopens resolved comment
   - Delete removes comment
   - 'Command: go test ./internal/tools/... -run TestManageComment passes'
-  passes: false
+  passes: true
 - id: US-00059
   title: Implement tool to translate presentation
   priority: 18

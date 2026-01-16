@@ -76,6 +76,9 @@ type DriveService interface {
 	MakeFilePublic(ctx context.Context, fileID string) error
 	ListComments(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)
 	CreateComment(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error)
+	CreateReply(ctx context.Context, fileID, commentID string, reply *drive.Reply) (*drive.Reply, error)
+	UpdateComment(ctx context.Context, fileID, commentID string, comment *drive.Comment) (*drive.Comment, error)
+	DeleteComment(ctx context.Context, fileID, commentID string) error
 }
 
 // DriveServiceFactory creates a Drive service from a token source.
@@ -192,6 +195,29 @@ func (s *realDriveService) ListComments(ctx context.Context, fileID string, incl
 func (s *realDriveService) CreateComment(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error) {
 	return s.service.Comments.Create(fileID, comment).
 		Fields("id,kind,content,htmlContent,author,createdTime,modifiedTime,resolved,deleted,anchor").
+		Context(ctx).
+		Do()
+}
+
+// CreateReply creates a reply to a comment.
+func (s *realDriveService) CreateReply(ctx context.Context, fileID, commentID string, reply *drive.Reply) (*drive.Reply, error) {
+	return s.service.Replies.Create(fileID, commentID, reply).
+		Fields("id,kind,content,htmlContent,author,createdTime,modifiedTime,deleted,action").
+		Context(ctx).
+		Do()
+}
+
+// UpdateComment updates a comment (used for resolving/unresolving).
+func (s *realDriveService) UpdateComment(ctx context.Context, fileID, commentID string, comment *drive.Comment) (*drive.Comment, error) {
+	return s.service.Comments.Update(fileID, commentID, comment).
+		Fields("id,kind,content,htmlContent,author,createdTime,modifiedTime,resolved,deleted,anchor").
+		Context(ctx).
+		Do()
+}
+
+// DeleteComment deletes a comment.
+func (s *realDriveService) DeleteComment(ctx context.Context, fileID, commentID string) error {
+	return s.service.Comments.Delete(fileID, commentID).
 		Context(ctx).
 		Do()
 }

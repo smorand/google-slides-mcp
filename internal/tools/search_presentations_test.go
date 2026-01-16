@@ -21,6 +21,9 @@ type mockDriveService struct {
 	MakeFilePublicFunc func(ctx context.Context, fileID string) error
 	ListCommentsFunc   func(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)
 	CreateCommentFunc  func(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error)
+	CreateReplyFunc    func(ctx context.Context, fileID, commentID string, reply *drive.Reply) (*drive.Reply, error)
+	UpdateCommentFunc  func(ctx context.Context, fileID, commentID string, comment *drive.Comment) (*drive.Comment, error)
+	DeleteCommentFunc  func(ctx context.Context, fileID, commentID string) error
 }
 
 func (m *mockDriveService) ListFiles(ctx context.Context, query string, pageSize int64, fields googleapi.Field) (*drive.FileList, error) {
@@ -77,6 +80,27 @@ func (m *mockDriveService) CreateComment(ctx context.Context, fileID string, com
 		return m.CreateCommentFunc(ctx, fileID, comment)
 	}
 	return nil, errors.New("not implemented")
+}
+
+func (m *mockDriveService) CreateReply(ctx context.Context, fileID, commentID string, reply *drive.Reply) (*drive.Reply, error) {
+	if m.CreateReplyFunc != nil {
+		return m.CreateReplyFunc(ctx, fileID, commentID, reply)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockDriveService) UpdateComment(ctx context.Context, fileID, commentID string, comment *drive.Comment) (*drive.Comment, error) {
+	if m.UpdateCommentFunc != nil {
+		return m.UpdateCommentFunc(ctx, fileID, commentID, comment)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockDriveService) DeleteComment(ctx context.Context, fileID, commentID string) error {
+	if m.DeleteCommentFunc != nil {
+		return m.DeleteCommentFunc(ctx, fileID, commentID)
+	}
+	return errors.New("not implemented")
 }
 
 func TestSearchPresentations_Success(t *testing.T) {

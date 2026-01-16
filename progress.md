@@ -2113,3 +2113,72 @@ Animations can only be managed through the Google Slides UI (View > Motion or In
 - CreateComment returns fields specified in Fields parameter, matching pattern from ListComments
 
 **Remaining issues:** None
+
+---
+
+## US-00058: Implement tool to reply/resolve/delete comment
+
+**Status:** Completed
+**Date:** 2026-01-16
+
+**Implementation Summary:**
+
+Implemented the `manage_comment` MCP tool that provides four actions for managing comments in Google Slides presentations: reply, resolve, unresolve, and delete.
+
+**Files Modified:**
+
+- `internal/tools/manage_comment.go` - New file with tool implementation:
+  - `ManageCommentInput` struct with presentation_id, comment_id, action, content fields
+  - `ManageCommentOutput` struct with success status, message, and reply_id (for replies)
+  - `ManageComment` method as main entry point with input validation
+  - `handleReply` - Creates a reply using Drive API Replies.Create
+  - `handleResolve` - Updates comment resolved status using Drive API Comments.Update
+  - `handleDelete` - Deletes comment using Drive API Comments.Delete
+  - Sentinel errors: ErrManageCommentFailed, ErrInvalidCommentAction, ErrInvalidCommentID, ErrReplyContentRequired, ErrCommentNotFound
+
+- `internal/tools/manage_comment_test.go` - New file with 23 test cases covering:
+  - Reply adds a reply to comment (happy path)
+  - Resolve marks comment as resolved
+  - Unresolve reopens resolved comment
+  - Delete removes comment
+  - Action is case insensitive (Reply, REPLY, reply all work)
+  - Error cases: empty presentation_id, empty comment_id, invalid action, missing content for reply
+  - API error handling: not found (404), access denied (403), generic API errors
+  - Drive service factory failure handling
+
+- `internal/tools/tools.go` - Extended DriveService interface:
+  - Added `CreateReply(ctx context.Context, fileID, commentID string, reply *drive.Reply) (*drive.Reply, error)` method
+  - Added `UpdateComment(ctx context.Context, fileID, commentID string, comment *drive.Comment) (*drive.Comment, error)` method
+  - Added `DeleteComment(ctx context.Context, fileID, commentID string) error` method
+  - Added implementations in realDriveService using Drive API v3
+
+- `internal/tools/search_presentations_test.go` - Updated mockDriveService:
+  - Added CreateReplyFunc, UpdateCommentFunc, DeleteCommentFunc fields
+  - Added CreateReply, UpdateComment, DeleteComment method implementations
+
+- `CLAUDE.md` - Added manage_comment documentation:
+  - Input/output examples
+  - Actions table (reply, resolve, unresolve, delete)
+  - Features, sentinel errors, usage patterns
+  - Updated DriveService interface to include new methods
+
+- `README.md` - Added manage_comment documentation:
+  - Detailed tool documentation with JSON examples
+  - Parameter table with descriptions
+  - Actions table
+  - Features and error descriptions
+  - Added to Collaboration section in tool summary
+
+- `stories.yaml` - Marked US-00058 as passes: true
+
+**Learnings:**
+- Comment management operations (reply, resolve, delete) are handled via Drive API, not Slides API
+- Drive API uses Comments.Update with resolved=true/false to resolve/unresolve comments
+- Replies are created via Drive API Replies.Create endpoint
+- Comments can be deleted entirely using Comments.Delete
+- The same 404/403 error handling pattern from other comment tools applies here
+- Action normalization (lowercase, trim) provides better UX without strict input requirements
+
+**Test Results:** All 23 tests pass
+
+**Remaining issues:** None

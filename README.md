@@ -4899,6 +4899,65 @@ Add a comment to a presentation with optional anchoring to a specific object or 
 - `drive API error` - Other Drive API errors
 
 ---
+
+#### `manage_comment`
+
+Reply to, resolve, unresolve, or delete a comment in a presentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "comment_id": "AAAABxyz",
+  "action": "reply",
+  "content": "Thanks for the feedback!"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `comment_id` | string | Yes | The comment ID to manage |
+| `action` | string | Yes | Action to perform: `reply`, `resolve`, `unresolve`, or `delete` |
+| `content` | string | For reply | Reply text (required only for `reply` action) |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "comment_id": "AAAABxyz",
+  "action": "reply",
+  "reply_id": "AAAACdef",
+  "success": true,
+  "message": "Reply added successfully"
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `reply` | Adds a reply to the comment (requires `content` parameter) |
+| `resolve` | Marks the comment as resolved |
+| `unresolve` | Reopens a resolved comment |
+| `delete` | Deletes the comment entirely |
+
+**Features:**
+- Manages comments via Drive API (comments are stored in Drive, not Slides API)
+- Action names are case-insensitive (`reply`, `REPLY`, `Reply` all work)
+- Reply action returns the created reply's ID
+- Resolve/unresolve updates the comment's resolved status
+- Delete permanently removes the comment
+
+**Errors:**
+- `comment_id is required` - Empty comment ID provided
+- `invalid action` - Action is not reply, resolve, unresolve, or delete
+- `content is required for reply action` - No content provided for reply action
+- `comment not found` - Comment doesn't exist
+- `presentation_id is required` - Empty presentation ID
+- `access denied` - No permission to manage the comment
+- `drive API error` - Other Drive API errors
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 - `modify_table_structure` - Add/remove rows and columns from tables
@@ -4918,6 +4977,7 @@ Add a comment to a presentation with optional anchoring to a specific object or 
 ### Collaboration
 - `list_comments` - List all comments in a presentation with replies and anchor info
 - `add_comment` - Add a comment to a presentation with optional object/slide anchoring
+- `manage_comment` - Reply to, resolve, unresolve, or delete a comment
 
 ## Configuration
 

@@ -4737,6 +4737,93 @@ output, err := tools.AddComment(ctx, tokenSource, tools.AddCommentInput{
 fmt.Printf("Created comment: %s\n", output.CommentID)
 ```
 
+### manage_comment Tool (`manage_comment.go`)
+Replies to, resolves, unresolves, or deletes a comment in a presentation.
+
+**Input:**
+```go
+tools.ManageCommentInput{
+    PresentationID: "presentation-id",  // Required
+    CommentID:      "comment-id",       // Required - the comment to manage
+    Action:         "reply",            // Required: "reply", "resolve", "unresolve", "delete"
+    Content:        "Reply text",       // Required for "reply" action only
+}
+```
+
+**Output:**
+```go
+tools.ManageCommentOutput{
+    PresentationID: "presentation-id",
+    CommentID:      "comment-id",
+    Action:         "reply",            // The action performed (normalized lowercase)
+    ReplyID:        "reply-123",        // Only for "reply" action
+    Success:        true,
+    Message:        "Reply added successfully",
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `reply` | Adds a reply to the comment (requires `content` parameter) |
+| `resolve` | Marks the comment as resolved |
+| `unresolve` | Reopens a resolved comment |
+| `delete` | Deletes the comment entirely |
+
+**Features:**
+- Manages comments via Drive API (comments are stored in Drive, not Slides API)
+- Action names are case-insensitive (reply, REPLY, Reply all work)
+- Reply action returns the created reply's ID
+- Resolve/unresolve updates the comment's resolved status
+- Delete permanently removes the comment
+
+**Sentinel Errors:**
+```go
+tools.ErrManageCommentFailed    // Generic comment management failure
+tools.ErrInvalidCommentAction   // Invalid action (not reply, resolve, unresolve, or delete)
+tools.ErrInvalidCommentID       // Comment ID is required (empty comment_id)
+tools.ErrReplyContentRequired   // Content is required for reply action
+tools.ErrCommentNotFound        // Comment not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrAccessDenied           // No permission to manage comment
+tools.ErrDriveAPIError          // Drive API errors
+```
+
+**Usage Pattern:**
+```go
+// Reply to a comment
+output, err := tools.ManageComment(ctx, tokenSource, tools.ManageCommentInput{
+    PresentationID: "abc123",
+    CommentID:      "comment-xyz",
+    Action:         "reply",
+    Content:        "Thanks for the feedback!",
+})
+fmt.Printf("Created reply: %s\n", output.ReplyID)
+
+// Resolve a comment
+output, err := tools.ManageComment(ctx, tokenSource, tools.ManageCommentInput{
+    PresentationID: "abc123",
+    CommentID:      "comment-xyz",
+    Action:         "resolve",
+})
+
+// Reopen a resolved comment
+output, err := tools.ManageComment(ctx, tokenSource, tools.ManageCommentInput{
+    PresentationID: "abc123",
+    CommentID:      "comment-xyz",
+    Action:         "unresolve",
+})
+
+// Delete a comment
+output, err := tools.ManageComment(ctx, tokenSource, tools.ManageCommentInput{
+    PresentationID: "abc123",
+    CommentID:      "comment-xyz",
+    Action:         "delete",
+})
+
+fmt.Printf("Action: %s, Success: %v, Message: %s\n", output.Action, output.Success, output.Message)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
@@ -4751,6 +4838,9 @@ type DriveService interface {
     MakeFilePublic(ctx context.Context, fileID string) error
     ListComments(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)
     CreateComment(ctx context.Context, fileID string, comment *drive.Comment) (*drive.Comment, error)
+    CreateReply(ctx context.Context, fileID, commentID string, reply *drive.Reply) (*drive.Reply, error)
+    UpdateComment(ctx context.Context, fileID, commentID string, comment *drive.Comment) (*drive.Comment, error)
+    DeleteComment(ctx context.Context, fileID, commentID string) error
 }
 
 // Factory pattern
