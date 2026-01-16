@@ -2529,3 +2529,48 @@ Implemented the `translate_presentation` MCP tool that translates text in a Goog
 **Test Results:** All 68 tests pass across 5 test files
 
 **Remaining issues:** None
+
+## 2026-01-16 - US-00064 - Create comprehensive README documentation
+
+**Status:** Success
+
+**What was implemented:**
+- Added Features section with Core Capabilities, Security & Reliability, and Deployment & Operations subsections
+- Added comprehensive Architecture Diagram using ASCII art showing:
+  - AI Client and User interaction flows
+  - Google Cloud Platform components (Cloud Run, Firestore, Secret Manager, Cloud Storage)
+  - Internal server layers (Transport, Auth, Tools, Middleware, Cache Manager)
+  - External Google APIs (Slides, Drive, Translate)
+- Added Data Flow section explaining the request/response lifecycle
+- Added API Rate Limits and Quotas section with:
+  - Google Slides API quotas (read/write/batch limits)
+  - Google Drive API quotas
+  - Google Translate API quotas
+  - MCP Server rate limiting configuration
+  - Best practices for quota management
+- Added Troubleshooting section with:
+  - Common authentication errors and solutions
+  - Permission error resolution
+  - API error handling (429, 500, 503)
+  - Tool-specific error guidance (transitions, animations, themes)
+  - Deployment issue resolution
+  - Debugging tips
+  - Links to external documentation
+- Expanded Configuration section with:
+  - Full environment variables table with defaults
+  - Terraform configuration example
+  - OAuth2 scopes explanation
+
+**Files changed:**
+- `README.md` - Added ~260 lines of documentation including Features, Architecture Diagram, Troubleshooting, and API Rate Limits sections
+- `stories.yaml` - Updated US-00064 passes to true
+
+**Learnings:**
+- ASCII art diagrams render well in markdown for architecture visualization
+- Troubleshooting sections should cover common integration issues (auth, permissions, rate limits)
+- Configuration documentation should include environment variable tables with defaults
+- API quota documentation helps users plan their usage patterns
+
+**Remaining issues:** None
+
+---

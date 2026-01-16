@@ -13,6 +13,33 @@ This MCP server enables AI assistants to:
 - Translate presentations
 - Export to PDF and other formats
 
+## Features
+
+### Core Capabilities
+
+- **40+ MCP Tools**: Comprehensive set of tools for presentation manipulation
+- **Read Operations**: Load presentations, list slides, search text, describe objects
+- **Write Operations**: Create slides, add text/images/videos, modify shapes, apply themes
+- **Batch Operations**: Execute multiple operations in a single API call
+- **Translation**: Translate presentations to 100+ languages via Google Translate API
+
+### Security & Reliability
+
+- **OAuth2 Authentication**: Secure user authorization via Google accounts
+- **API Key Management**: UUID-based API keys with Firestore storage
+- **Permission Verification**: Validates write access before modifications
+- **Rate Limiting**: Token bucket algorithm with configurable limits
+- **Retry Logic**: Exponential backoff with jitter for transient failures
+- **Caching**: In-memory LRU cache for tokens, permissions, and document structure
+
+### Deployment & Operations
+
+- **Cloud Native**: Designed for Google Cloud Run deployment
+- **Infrastructure as Code**: Complete Terraform configuration
+- **CI/CD Ready**: Cloud Build integration with automated deployments
+- **Health Monitoring**: Health check endpoint for load balancers
+- **Structured Logging**: JSON logging with request tracing
+
 ## Architecture
 
 The server is designed to run on Google Cloud Run and uses:
@@ -20,6 +47,70 @@ The server is designed to run on Google Cloud Run and uses:
 - **OAuth2 Authentication**: User authorization via Google OAuth2
 - **API Key Management**: Generated API keys stored in Firestore
 - **Secret Manager**: Secure storage of OAuth2 credentials
+
+### Architecture Diagram
+
+```
+                                    ┌─────────────────────────────────────────────────────────────┐
+                                    │                     Google Cloud Platform                    │
+                                    │  ┌─────────────────────────────────────────────────────────┐ │
+                                    │  │                      Cloud Run                           │ │
+┌──────────────┐                    │  │  ┌─────────────────────────────────────────────────────┐│ │
+│   AI Client  │                    │  │  │              Google Slides MCP Server              ││ │
+│  (Claude,    │  HTTPS + API Key   │  │  │                                                    ││ │
+│   ChatGPT,   │────────────────────┼──┼──┤  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ ││ │
+│   etc.)      │                    │  │  │  │ Transport │  │   Auth   │  │      Tools       │ ││ │
+└──────────────┘                    │  │  │  │  Layer    │  │  Layer   │  │   (40+ tools)    │ ││ │
+                                    │  │  │  └────┬─────┘  └────┬─────┘  └────────┬─────────┘ ││ │
+       │                            │  │  │       │             │                  │          ││ │
+       │                            │  │  │       │      ┌──────┴──────┐           │          ││ │
+       ▼                            │  │  │       │      │             │           │          ││ │
+┌──────────────┐                    │  │  │  ┌────▼────┐ │ ┌───────────▼──────┐    │          ││ │
+│    User      │   OAuth2 Flow      │  │  │  │Middleware│ │ │    Permission   │    │          ││ │
+│  (Browser)   │◄───────────────────┼──┼──┤  │(API Key, │ │ │    Checker      │    │          ││ │
+└──────────────┘                    │  │  │  │Rate Limit│ │ └─────────────────┘    │          ││ │
+                                    │  │  │  └────┬────┘ │                         │          ││ │
+                                    │  │  │       │      │                         │          ││ │
+                                    │  │  │       │      │    ┌────────────────────┘          ││ │
+                                    │  │  │       ▼      ▼    ▼                               ││ │
+                                    │  │  │  ┌──────────────────────┐                         ││ │
+                                    │  │  │  │   Cache Manager      │                         ││ │
+                                    │  │  │  │ (Tokens, Permissions,│                         ││ │
+                                    │  │  │  │  Presentations)      │                         ││ │
+                                    │  │  │  └──────────────────────┘                         ││ │
+                                    │  │  └─────────────────────────────────────────────────────┘│ │
+                                    │  └─────────────────────────────────────────────────────────┘ │
+                                    │                              │                               │
+                                    │         ┌────────────────────┼────────────────────┐          │
+                                    │         ▼                    ▼                    ▼          │
+                                    │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐      │
+                                    │  │  Firestore   │   │   Secret     │   │   Cloud      │      │
+                                    │  │  (API Keys,  │   │   Manager    │   │   Storage    │      │
+                                    │  │   Tokens)    │   │   (OAuth2)   │   │   (Images)   │      │
+                                    │  └──────────────┘   └──────────────┘   └──────────────┘      │
+                                    └─────────────────────────────────────────────────────────────┘
+                                                               │
+                                                               ▼
+                                    ┌─────────────────────────────────────────────────────────────┐
+                                    │                        Google APIs                          │
+                                    │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+                                    │  │  Slides API  │  │  Drive API   │  │ Translate API│      │
+                                    │  │              │  │              │  │              │      │
+                                    │  │ - Get/Update │  │ - Search     │  │ - Translate  │      │
+                                    │  │ - BatchUpdate│  │ - Copy/Export│  │   text       │      │
+                                    │  │ - Thumbnails │  │ - Permissions│  │              │      │
+                                    │  └──────────────┘  └──────────────┘  └──────────────┘      │
+                                    └─────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+1. **Authentication Flow**: User authenticates via OAuth2, receives API key
+2. **API Requests**: AI client sends MCP requests with API key in Authorization header
+3. **Validation**: Middleware validates API key, checks rate limits, creates token source
+4. **Permission Check**: Tools verify user has access to the presentation
+5. **API Calls**: Tools call Google APIs (Slides, Drive, Translate) with user's credentials
+6. **Response**: Results are returned via chunked HTTP response
 
 ### Endpoints
 
@@ -5201,13 +5292,258 @@ These operations require separate API calls but are still supported:
 
 ---
 
+## API Rate Limits and Quotas
+
+### Google Slides API Quotas
+
+| Quota | Limit | Notes |
+|-------|-------|-------|
+| Read requests | 300/minute | Per user per project |
+| Write requests | 60/minute | Per user per project |
+| BatchUpdate requests | 60/minute | Per user per project |
+| Daily quota | Varies | Based on project quota allocation |
+
+### Google Drive API Quotas
+
+| Quota | Limit | Notes |
+|-------|-------|-------|
+| Queries per 100 seconds | 20,000 | Per project |
+| Queries per 100 seconds per user | 1,000 | Per user |
+| Daily usage limit | Configurable | In GCP Console |
+
+### Google Translate API Quotas
+
+| Quota | Limit | Notes |
+|-------|-------|-------|
+| Characters per day | 500,000 | Free tier |
+| Characters per 100 seconds | 100,000 | Per project |
+
+### MCP Server Rate Limiting
+
+The server implements its own rate limiting to protect against abuse:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Requests per second | 10 | Token bucket refill rate |
+| Burst size | 20 | Maximum concurrent requests |
+| Per-endpoint limits | Configurable | Can set different limits per endpoint |
+
+### Handling Rate Limit Errors
+
+When rate limits are exceeded:
+
+1. **HTTP 429 Response**: Server returns `429 Too Many Requests`
+2. **Retry-After Header**: Contains seconds to wait before retrying
+3. **X-RateLimit Headers**: Show current quota status:
+   - `X-RateLimit-Limit`: Maximum requests allowed
+   - `X-RateLimit-Remaining`: Requests remaining in current window
+   - `X-RateLimit-Reset`: Unix timestamp when limit resets
+
+**Recommended client behavior:**
+```python
+# Example retry logic
+import time
+
+def call_with_retry(request, max_retries=5):
+    for attempt in range(max_retries):
+        response = make_request(request)
+        if response.status_code == 429:
+            retry_after = int(response.headers.get('Retry-After', 60))
+            time.sleep(retry_after)
+            continue
+        return response
+    raise Exception("Max retries exceeded")
+```
+
+### Best Practices for Quota Management
+
+1. **Use Batch Operations**: Combine multiple operations using `batch_update` to reduce API calls
+2. **Enable Caching**: The server caches presentations and permissions to reduce API calls
+3. **Implement Backoff**: Use exponential backoff when retrying failed requests
+4. **Monitor Usage**: Track API usage in Google Cloud Console
+5. **Request Quota Increase**: If needed, request higher quotas in GCP Console
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### Authentication Errors
+
+**Problem: "401 Unauthorized" on API requests**
+- **Cause**: Invalid or expired API key
+- **Solution**:
+  1. Re-authenticate via `/auth` endpoint
+  2. Ensure API key is passed in `Authorization: Bearer <api_key>` header
+  3. Check if API key exists in Firestore
+
+**Problem: "OAuth2 callback error"**
+- **Cause**: Invalid OAuth2 credentials or redirect URI mismatch
+- **Solution**:
+  1. Verify OAuth2 credentials in Secret Manager
+  2. Ensure redirect URI matches in Google Cloud Console OAuth configuration
+  3. Check that required scopes are enabled
+
+#### Permission Errors
+
+**Problem: "403 Access Denied" on presentation operations**
+- **Cause**: User lacks permission to access or modify the presentation
+- **Solution**:
+  1. Verify user has access to the presentation in Google Drive
+  2. For write operations, ensure user has Editor role (not Viewer/Commenter)
+  3. Check if presentation is in a shared drive with restricted access
+
+**Problem: "Presentation not found"**
+- **Cause**: Invalid presentation ID or deleted presentation
+- **Solution**:
+  1. Verify presentation ID is correct (extract from URL: `docs.google.com/presentation/d/<ID>/edit`)
+  2. Check if presentation was moved to trash
+  3. Ensure user has access to the presentation
+
+#### API Errors
+
+**Problem: "429 Too Many Requests"**
+- **Cause**: Rate limit exceeded
+- **Solution**:
+  1. Wait for the duration specified in `Retry-After` header
+  2. Reduce request frequency
+  3. Use batch operations to combine multiple calls
+  4. Check Google Cloud Console for quota status
+
+**Problem: "500 Internal Server Error"**
+- **Cause**: Google API transient failure or server issue
+- **Solution**:
+  1. Retry with exponential backoff (automatic with retry logic enabled)
+  2. Check Google Cloud Status Dashboard for outages
+  3. Review server logs for specific error details
+
+**Problem: "503 Service Unavailable"**
+- **Cause**: Google API temporarily unavailable
+- **Solution**:
+  1. Wait and retry (automatic retry is configured)
+  2. Check Google Cloud Status for maintenance windows
+
+#### Tool-Specific Errors
+
+**Problem: "set_transition returns error"**
+- **Cause**: Google Slides API does not support setting transitions programmatically
+- **Solution**: Use Google Slides UI directly (Slide > Transition)
+
+**Problem: "add_animation returns error"**
+- **Cause**: Google Slides API does not support adding animations programmatically
+- **Solution**: Use Google Slides UI directly (Insert > Animation)
+
+**Problem: "apply_theme with gallery source fails"**
+- **Cause**: Google Slides API does not support applying gallery themes
+- **Solution**:
+  1. Use theme source `presentation` to copy from an existing presentation
+  2. Use Google Slides UI to apply gallery themes
+
+**Problem: "Image upload failed"**
+- **Cause**: Invalid image data or unsupported format
+- **Solution**:
+  1. Ensure image is base64-encoded
+  2. Use supported formats: PNG, JPEG, GIF, WebP, BMP
+  3. Check image data is not corrupted
+
+**Problem: "Table cell index out of range"**
+- **Cause**: Row or column index exceeds table dimensions
+- **Solution**:
+  1. Use `get_object` to verify table dimensions first
+  2. Ensure 0-based indices are used (row 0, column 0 is first cell)
+
+#### Deployment Issues
+
+**Problem: "Cloud Run deployment fails"**
+- **Cause**: Build error or configuration issue
+- **Solution**:
+  1. Check Cloud Build logs for build errors
+  2. Verify Dockerfile builds locally: `docker build -t test .`
+  3. Ensure all required secrets exist in Secret Manager
+  4. Check IAM permissions for Cloud Run service account
+
+**Problem: "Terraform apply fails"**
+- **Cause**: Missing APIs, permissions, or configuration errors
+- **Solution**:
+  1. Run `terraform init` to initialize
+  2. Check `config.yaml` has valid project ID
+  3. Ensure Cloud Resource Manager API is enabled
+  4. Verify user has Owner/Editor role on project
+
+**Problem: "Health check fails"**
+- **Cause**: Server not starting or wrong port configuration
+- **Solution**:
+  1. Check server logs in Cloud Run console
+  2. Verify PORT environment variable is set correctly
+  3. Test locally: `curl http://localhost:8080/health`
+
+### Debugging Tips
+
+1. **Enable verbose logging**: Set log level to DEBUG in environment
+2. **Check request/response**: Use `curl -v` to see full HTTP headers
+3. **Test locally first**: Run server with `make run` before deploying
+4. **Validate inputs**: Use JSON schema to validate tool parameters
+5. **Check API quotas**: Monitor usage in Google Cloud Console
+
+### Getting Help
+
+- **GitHub Issues**: Report bugs at the project repository
+- **Google API Documentation**:
+  - [Slides API](https://developers.google.com/slides/api)
+  - [Drive API](https://developers.google.com/drive/api)
+  - [Translate API](https://cloud.google.com/translate/docs)
+- **MCP Specification**: [Model Context Protocol](https://modelcontextprotocol.io/)
+
+---
+
 ## Configuration
 
-Environment variables:
-- `PORT` - HTTP server port (default: 8080)
-- `GCP_PROJECT_ID` - Google Cloud project ID
-- `OAUTH_CLIENT_ID` - OAuth2 client ID (from Secret Manager)
-- `OAUTH_CLIENT_SECRET` - OAuth2 client secret (from Secret Manager)
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | 8080 | HTTP server port |
+| `GCP_PROJECT_ID` | Yes | - | Google Cloud project ID |
+| `OAUTH_CLIENT_ID` | Yes | - | OAuth2 client ID (from Secret Manager in production) |
+| `OAUTH_CLIENT_SECRET` | Yes | - | OAuth2 client secret (from Secret Manager in production) |
+| `LOG_LEVEL` | No | INFO | Logging level (DEBUG, INFO, WARN, ERROR) |
+| `RATE_LIMIT_RPS` | No | 10 | Rate limit requests per second |
+| `RATE_LIMIT_BURST` | No | 20 | Rate limit burst size |
+| `CACHE_TTL_MINUTES` | No | 5 | Cache TTL for presentations and permissions |
+| `TOKEN_CACHE_TTL_MINUTES` | No | 55 | Cache TTL for access tokens |
+
+### Terraform Configuration
+
+Edit `terraform/config.yaml` to customize deployment:
+
+```yaml
+gcp:
+  project_id: "your-project-id"
+  location: "europe-west1"
+  resources:
+    cloud_run:
+      cpu: "1"
+      memory: "512Mi"
+      min_instances: 0
+      max_instances: 10
+      timeout: "300s"
+
+parameters:
+  log_level: "INFO"
+  rate_limit_rps: "10"
+  rate_limit_burst: "20"
+```
+
+### OAuth2 Scopes
+
+The server requests these OAuth2 scopes:
+
+| Scope | Purpose |
+|-------|---------|
+| `https://www.googleapis.com/auth/presentations` | Full access to Slides API |
+| `https://www.googleapis.com/auth/drive` | Full access to Drive API (search, copy, permissions) |
+| `https://www.googleapis.com/auth/cloud-translation` | Access to Translation API |
 
 ## License
 
