@@ -657,15 +657,13 @@
 - id: US-00027
   title: Implement tool to apply text styling
   priority: 6
-  description: "MCP Tool: style_text\nApply styling to text in a shape:\n- Input:\
-    	 presentation_id, object_id\n- Input: start_index, end_index (optional, whole\n    	 text if omitted)\n- Input: style object with any of:\n  - font_family (string)
-\n  - font_size (int, points)
-  - bold (bool), italic (bool), underline (bool), strikethrough (bool)
-  - foreground_color (hex string, e.g., \"#FF0000\")
-\n  - background_color (hex string)
-  - link_url (string, for hyperlinks)
-- Returns:
-    	 confirmation with applied styles\n"
+  description: "MCP Tool: style_text\nApply styling to text in a shape:\n- Input:presentation_id,\
+    \ object_id\n- Input: start_index, end_index (optional, whole\n    \t text if\
+    \ omitted)\n- Input: style object with any of:\n  - font_family (string) \n  -\
+    \ font_size (int, points) - bold (bool), italic (bool), underline (bool), strikethrough\
+    \ (bool) - foreground_color (hex string, e.g., \"#FF0000\") \n  - background_color\
+    \ (hex string) - link_url (string, for hyperlinks) - Returns: confirmation with\
+    \ applied styles\n"
   tests:
   - Font family is applied
   - Font size is applied (in points)
@@ -678,21 +676,12 @@
 - id: US-00028
   title: Implement tool to set paragraph formatting
   priority: 6
-  description: "MCP Tool: format_paragraph\nSet paragraph formatting options:\n- Input:\
-    	 presentation_id, object_id
-- Input: paragraph_index (optional, all paragraphs\n    	 if omitted)
-- Input: formatting object with any of:
-  - alignment: 'START' | 'CENTER' | 'END' | 'JUSTIFIED'
-  - line_spacing (percentage, e.g., 150 for
-    	 1.5 lines)
-  - space_above (points)
-  - space_below (points)
-  - indent_first_line
-    	 (points)
-  - indent_start (points)
-  - indent_end (points)
-- Returns:
-    	 confirmation\n"
+  description: "MCP Tool: format_paragraph\nSet paragraph formatting options:\n- Input:presentation_id,\
+    \ object_id - Input: paragraph_index (optional, all paragraphs\n    \t if omitted)\
+    \ - Input: formatting object with any of: - alignment: 'START' | 'CENTER' | 'END'\
+    \ | 'JUSTIFIED' - line_spacing (percentage, e.g., 150 for 1.5 lines) - space_above\
+    \ (points) - space_below (points) - indent_first_line (points) - indent_start\
+    \ (points) - indent_end (points) - Returns: confirmation\n"
   tests:
   - Alignment options work
   - Line spacing is applied
@@ -810,21 +799,18 @@
 - id: US-00033
   title: Implement tool to modify image properties
   priority: 8
-  description: "MCP Tool: modify_image\nModify image properties:\n- Input: presentation_id,
-    	 object_id
-- Input: properties object with any of:
-  - position {x, y}
-  -
-    	 size {width, height}
-  - crop {top, bottom, left, right} (percentage 0-1)
+  description: 'MCP Tool: modify_image
 
-  - brightness (float, -1 to 1)
-  - contrast (float, -1 to 1)
-  - transparency
-    	 (float, 0 to 1)
-  - recolor (preset name or none)
-- Returns:
-    	 confirmation\n"
+    Modify image properties:
+
+    - Input: presentation_id, object_id - Input: properties object with any of: -
+    position {x, y} - size {width, height} - crop {top, bottom, left, right} (percentage
+    0-1)
+
+    - brightness (float, -1 to 1) - contrast (float, -1 to 1) - transparency (float,
+    0 to 1) - recolor (preset name or none) - Returns: confirmation
+
+    '
   tests:
   - Position modification works
   - Size modification works
@@ -861,18 +847,17 @@
 - id: US-00035
   title: Implement tool to create shape
   priority: 9
-  description: "MCP Tool: create_shape\nCreate a shape on a slide:\n- Input: presentation_id,
-    	 slide_index OR slide_id
-- Input: shape_type: 'RECTANGLE' | 'ELLIPSE' | 'ROUND_RECTANGLE' | 'TRIANGLE' |
-                     'ARROW_RIGHT' | 'ARROW_LEFT' | 'ARROW_UP' | 'ARROW_DOWN' |
-                     'STAR_5' | 'STAR_4' | 'PENTAGON' | 'HEXAGON' | etc.
-- Input: position {x, y}, size {width, height} in points
-- Input: fill_color
-    	 (hex string, optional)
-- Input: outline_color, outline_weight (optional)
+  description: 'MCP Tool: create_shape
 
-    - Returns: object_id
-"
+    Create a shape on a slide:
+
+    - Input: presentation_id, slide_index OR slide_id - Input: shape_type: ''RECTANGLE''
+    | ''ELLIPSE'' | ''ROUND_RECTANGLE'' | ''TRIANGLE'' | ''ARROW_RIGHT'' | ''ARROW_LEFT''
+    | ''ARROW_UP'' | ''ARROW_DOWN'' | ''STAR_5'' | ''STAR_4'' | ''PENTAGON'' | ''HEXAGON''
+    | etc. - Input: position {x, y}, size {width, height} in points - Input: fill_color
+    (hex string, optional) - Input: outline_color, outline_weight (optional)
+
+    - Returns: object_id '
   tests:
   - Tool creates various shape types
   - Position and size are correct
@@ -916,20 +901,17 @@
 - id: US-00037
   title: Implement tool to modify shape properties
   priority: 9
-  description: "MCP Tool: modify_shape\nModify shape appearance:\n- Input: presentation_id,
-    	 object_id
-- Input: properties object with any of:
-  - fill_color (hex string
-    	 or 'transparent')
-  - outline_color (hex string or 'transparent')
-  - outline_weight
-    	 (points)
-  - outline_dash ('SOLID' | 'DASH' | 'DOT' | 'DASH_DOT')
-  - shadow
-    	 (bool or shadow config)
-  - reflection (bool or reflection config)
-- Returns:
-    	 confirmation\n"
+  description: 'MCP Tool: modify_shape
+
+    Modify shape appearance:
+
+    - Input: presentation_id, object_id - Input: properties object with any of: -
+    fill_color (hex string or ''transparent'') - outline_color (hex string or ''transparent'')
+    - outline_weight (points) - outline_dash (''SOLID'' | ''DASH'' | ''DOT'' | ''DASH_DOT'')
+    - shadow (bool or shadow config) - reflection (bool or reflection config) - Returns:
+    confirmation
+
+    '
   tests:
   - Fill color modification works
   - Transparent fill works
@@ -965,7 +947,7 @@
   - Proportional scaling works
   - All values in points
   - 'Command: go test ./internal/tools/... -run TestTransformObject passes'
-  passes: false
+  passes: true
 - id: US-00039
   title: Implement tool to change object z-order
   priority: 10
@@ -986,7 +968,7 @@
   - bring_forward moves up one layer
   - send_backward moves down one layer
   - 'Command: go test ./internal/tools/... -run TestChangeZOrder passes'
-  passes: false
+  passes: true
 - id: US-00040
   title: Implement tool to group/ungroup objects
   priority: 10
@@ -1138,17 +1120,16 @@
 - id: US-00046
   title: Implement tool to style table cells
   priority: 11
-  description: "MCP Tool: style_table_cells\nApply visual styling to cells:\n- Input:\
-    	 presentation_id, object_id (table)
-- Input: cells (array of {row, column} or
-    	 'all' or 'row:N' or 'column:N')
-- Input: style object:
-  - background_color
-    	 (hex)
-  - border_top, border_bottom, border_left, border_right: {color, width,
-    	 dash_style}
-- Returns:
-    	 confirmation\n"
+  description: 'MCP Tool: style_table_cells
+
+    Apply visual styling to cells:
+
+    - Input:presentation_id, object_id (table) - Input: cells (array of {row, column}
+    or ''all'' or ''row:N'' or ''column:N'') - Input: style object: - background_color
+    (hex) - border_top, border_bottom, border_left, border_right: {color, width, dash_style}
+    - Returns: confirmation
+
+    '
   tests:
   - Background color is applied to cells
   - Border properties work (color, width)
@@ -1191,19 +1172,15 @@
 - id: US-00048
   title: Implement tool to modify video properties
   priority: 12
-  description: "MCP Tool: modify_video\nModify video playback properties:\n- Input:\
-    	 presentation_id, object_id
-- Input: properties object with any of:
-  - start_time
-    	 (seconds)
-  - end_time (seconds)
-  - autoplay (bool)
-  - mute (bool)
-  -
-    	 position {x, y}
-  - size {width, height}
-- Returns:
-    	 confirmation\n"
+  description: 'MCP Tool: modify_video
+
+    Modify video playback properties:
+
+    - Input:presentation_id, object_id - Input: properties object with any of: - start_time
+    (seconds) - end_time (seconds) - autoplay (bool) - mute (bool) - position {x,
+    y} - size {width, height} - Returns: confirmation
+
+    '
   tests:
   - Playback range (start/end) can be modified
   - Autoplay setting can be changed
@@ -1296,16 +1273,20 @@
 - id: US-00052
   title: Implement tool to set slide transition
   priority: 14
-  description: "MCP Tool: set_transition\nSet transition effect for slide:\n- Input:\
-    	 presentation_id
-- Input: slide_index OR slide_id (optional, 'all' for all slides)
+  description: 'MCP Tool: set_transition
 
-    - Input: transition_type: 'NONE' | 'FADE' | 'SLIDE_FROM_RIGHT' | 'SLIDE_FROM_LEFT' |
-         'SLIDE_FROM_TOP' | 'SLIDE_FROM_BOTTOM' | 'FLIP' | 'CUBE' | 'GALLERY' |
-         'ZOOM' | 'DISSOLVE' | etc.
-- Input: duration (seconds, e.g., 0.5)
+    Set transition effect for slide:
 
-    - Returns: confirmation\n"
+    - Input:presentation_id - Input: slide_index OR slide_id (optional, ''all'' for
+    all slides)
+
+    - Input: transition_type: ''NONE'' | ''FADE'' | ''SLIDE_FROM_RIGHT'' | ''SLIDE_FROM_LEFT''
+    | ''SLIDE_FROM_TOP'' | ''SLIDE_FROM_BOTTOM'' | ''FLIP'' | ''CUBE'' | ''GALLERY''
+    | ''ZOOM'' | ''DISSOLVE'' | etc. - Input: duration (seconds, e.g., 0.5)
+
+    - Returns: confirmation
+
+    '
   tests:
   - Tool sets transition on single slide
   - Tool sets transition on all slides
@@ -1317,23 +1298,14 @@
 - id: US-00053
   title: Implement tool to add object animation
   priority: 15
-  description: "MCP Tool: add_animation\nAdd entrance/exit animation to object:\n
-    - Input: presentation_id, object_id
-- Input: animation_type: 'APPEAR' | 'FADE_IN'
-    	 | 'FLY_IN' | 'ZOOM_IN' |
-         'FADE_OUT' | 'FLY_OUT' | 'ZOOM_OUT' | 'SPIN' | 'FLOAT' | 'BOUNCE'
-- Input: animation_category: 'entrance' | 'exit' | 'emphasis'
-
-    - Input: direction (for fly animations): 'FROM_LEFT' | 'FROM_RIGHT' | 'FROM_TOP'
-    	 | 'FROM_BOTTOM'
-- Input: duration (seconds)
-- Input: delay (seconds, delay
-    	 before animation starts)
-- Input: trigger: 'ON_CLICK' | 'AFTER_PREVIOUS' |
-    	 'WITH_PREVIOUS'
-- Returns:
-    	 animation_id
-"
+  description: "MCP Tool: add_animation\nAdd entrance/exit animation to object:\n\
+    \ - Input: presentation_id, object_id - Input: animation_type: 'APPEAR' | 'FADE_IN'\
+    \ | 'FLY_IN' | 'ZOOM_IN' | 'FADE_OUT' | 'FLY_OUT' | 'ZOOM_OUT' | 'SPIN' | 'FLOAT'\
+    \ | 'BOUNCE' - Input: animation_category: 'entrance' | 'exit' | 'emphasis'\n-\
+    \ Input: direction (for fly animations): 'FROM_LEFT' | 'FROM_RIGHT' | 'FROM_TOP'\
+    \ | 'FROM_BOTTOM' - Input: duration (seconds) - Input: delay (seconds, delay before\
+    \ animation starts) - Input: trigger: 'ON_CLICK' | 'AFTER_PREVIOUS' | 'WITH_PREVIOUS'\
+    \ - Returns: animation_id "
   tests:
   - Entrance animations work
   - Exit animations work
@@ -1685,3 +1657,4 @@
   - Test cleanup removes test artifacts
   - 'Command: make test-integration succeeds (when creds available)'
   passes: false
+

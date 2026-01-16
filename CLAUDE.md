@@ -2843,6 +2843,155 @@ output, err := tools.ModifyShape(ctx, tokenSource, tools.ModifyShapeInput{
 })
 ```
 
+### transform_object Tool (`transform_object.go`)
+Moves, resizes, or rotates any object.
+
+**Input:**
+```go
+tools.TransformObjectInput{
+    PresentationID:      "presentation-id",  // Required
+    ObjectID:            "object-id",        // Required
+    Position:            &PositionInput{X: 100, Y: 100}, // Optional - new position in points
+    Size:                &SizeInput{Width: 200, Height: 100}, // Optional - new size in points
+    Rotation:            &degrees,           // Optional - rotation angle in degrees (0-360)
+    ScaleProportionally: true,               // Optional - default true
+}
+```
+
+**Output:**
+```go
+tools.TransformObjectOutput{
+    Position: &Position{X: 100, Y: 100},
+    Size:     &Size{Width: 200, Height: 100},
+    Rotation: 90.0,
+}
+```
+
+**Features:**
+- Move object to absolute coordinates
+- Resize object (width/height) with optional proportional scaling
+- Rotate object to specific angle
+- Handles complex affine transform math (decomposes existing transform, applies updates, recomposes)
+- Preserves existing properties not being updated (e.g., rotate without moving)
+
+**Sentinel Errors:**
+```go
+tools.ErrTransformFailed        // Generic transform failure
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Move object
+output, err := tools.TransformObject(ctx, tokenSource, tools.TransformObjectInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Position:       &tools.PositionInput{X: 50, Y: 50},
+})
+
+// Resize object (double width, keeping aspect ratio)
+output, err := tools.TransformObject(ctx, tokenSource, tools.TransformObjectInput{
+    PresentationID:      "abc123",
+    ObjectID:            "shape-xyz",
+    Size:                &tools.SizeInput{Width: 400},
+    ScaleProportionally: true,
+})
+
+// Rotate object
+rotation := 45.0
+output, err := tools.TransformObject(ctx, tokenSource, tools.TransformObjectInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Rotation:       &rotation,
+})
+```
+
+### change_z_order Tool (`change_z_order.go`)
+Changes the z-order (layering) of an object on a slide.
+
+**Input:**
+```go
+tools.ChangeZOrderInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "object-id",        // Required
+    Action:         "bring_to_front",   // Required: bring_to_front, send_to_back, bring_forward, send_backward
+}
+```
+
+**Output:**
+```go
+tools.ChangeZOrderOutput{
+    ObjectID:    "object-id",     // The modified object's ID
+    Action:      "bring_to_front", // The action performed (lowercase)
+    NewZOrder:   2,               // 0-based position (0 = furthest back)
+    TotalLayers: 3,               // Total number of objects on the slide
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `bring_to_front` | Moves object to the top of the stack (front) |
+| `send_to_back` | Moves object to the bottom of the stack (back) |
+| `bring_forward` | Moves object up one layer |
+| `send_backward` | Moves object down one layer |
+
+**Features:**
+- Action names are case-insensitive (bring_to_front, BRING_TO_FRONT both work)
+- Returns new z-order position and total layer count after change
+- Prevents z-order changes on grouped objects (API limitation)
+- Uses `UpdatePageElementsZOrderRequest` in Slides API BatchUpdate
+
+**Sentinel Errors:**
+```go
+tools.ErrChangeZOrderFailed    // Generic z-order change failure
+tools.ErrInvalidZOrderAction   // Invalid action (not one of the four valid actions)
+tools.ErrObjectInGroup         // Cannot change z-order of grouped objects
+tools.ErrObjectNotFound        // Object not found in presentation
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Bring object to front
+output, err := tools.ChangeZOrder(ctx, tokenSource, tools.ChangeZOrderInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "bring_to_front",
+})
+
+// Send object to back
+output, err := tools.ChangeZOrder(ctx, tokenSource, tools.ChangeZOrderInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "send_to_back",
+})
+
+// Move object forward one layer
+output, err := tools.ChangeZOrder(ctx, tokenSource, tools.ChangeZOrderInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "bring_forward",
+})
+
+// Move object backward one layer
+output, err := tools.ChangeZOrder(ctx, tokenSource, tools.ChangeZOrderInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+    Action:         "send_backward",
+})
+
+// Check new position
+fmt.Printf("Object is now at layer %d of %d\n", output.NewZOrder, output.TotalLayers)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

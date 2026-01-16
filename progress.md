@@ -1283,3 +1283,35 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00039 - Implement tool to change object z-order
+
+**Status:** Success
+
+**What was implemented:**
+- New `change_z_order` MCP tool to change object layering (z-order) on a slide
+- Four actions supported: bring_to_front, send_to_back, bring_forward, send_backward
+- Action names are case-insensitive (normalized to uppercase for API)
+- Uses Google Slides `UpdatePageElementsZOrderRequest` in BatchUpdate API
+- Returns new z-order position (0-based) and total layers count after change
+- Validates that object is not inside a group (API limitation prevents z-order changes on grouped objects)
+- Helper function `findElementAndCheckGroup` to detect grouped objects
+- Re-fetches presentation after change to calculate actual new position
+- Comprehensive test suite with 14 main tests + 5 helper function tests
+
+**Files changed:**
+- `internal/tools/change_z_order.go` - Tool implementation with ChangeZOrderInput, ChangeZOrderOutput, validZOrderActions map, findElementAndCheckGroup helper
+- `internal/tools/change_z_order_test.go` - Comprehensive tests including z-order simulation helper
+- `CLAUDE.md` - Added change_z_order documentation with actions table, sentinel errors, usage patterns
+- `README.md` - Added change_z_order tool documentation with input/output examples
+
+**Learnings:**
+- Google Slides API uses `UpdatePageElementsZOrderRequest` with `Operation` field (BRING_TO_FRONT, SEND_TO_BACK, BRING_FORWARD, SEND_BACKWARD)
+- API requires `PageElementObjectIds` as array - supports multiple objects but must all be on same page and not grouped
+- Z-order position is represented by array index in `PageElements` (0 = furthest back, last index = front)
+- Grouped objects cannot have their z-order changed via API - must check before attempting
+- Pattern: validate action mapping early with case-insensitive lookup, then use mapped API constant
+
+**Remaining issues:** None
+
+---

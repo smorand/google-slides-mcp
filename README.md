@@ -3285,6 +3285,168 @@ Make transparent with dashed outline:
 - `failed to modify shape` - API error
 
 ---
+
+#### `transform_object`
+
+Move, resize, or rotate any object.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-123",
+  "position": {"x": 100, "y": 100},
+  "size": {"width": 200, "height": 100},
+  "rotation": 45,
+  "scale_proportionally": true
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the object to transform |
+| `position` | object | No | New position in points {x, y} |
+| `size` | object | No | New size in points {width, height} |
+| `rotation` | number | No | Rotation angle in degrees (0-360) |
+| `scale_proportionally` | boolean | No | Whether to scale proportionally when resizing (default: true) |
+
+**Output:**
+```json
+{
+  "position": {"x": 100, "y": 100},
+  "size": {"width": 200, "height": 100},
+  "rotation": 45
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `position` | object | Final position in points |
+| `size` | object | Final size in points |
+| `rotation` | number | Final rotation in degrees |
+
+**Features:**
+- Move objects to absolute coordinates
+- Resize objects with optional proportional scaling
+- Rotate objects to specific angles
+- Handles complex transform math automatically
+
+**Examples:**
+
+Move an object:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "position": {"x": 50, "y": 50}
+}
+```
+
+Resize (double width):
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "size": {"width": 400}
+}
+```
+
+Rotate 45 degrees:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "rotation": 45
+}
+```
+
+**Errors:**
+- `object not found` - Object ID not found
+- `cannot resize object with unknown base size` - Cannot determine original size for scaling
+- `access denied` - No permission to modify
+- `failed to transform object` - API error
+
+---
+
+#### `change_z_order`
+
+Change the z-order (layering) of an object on a slide.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-123",
+  "action": "bring_to_front"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | ID of the object to reorder |
+| `action` | string | Yes | Z-order action (see Actions table) |
+
+**Actions:**
+
+| Action | Description |
+|--------|-------------|
+| `bring_to_front` | Moves object to the top of the stack (front) |
+| `send_to_back` | Moves object to the bottom of the stack (back) |
+| `bring_forward` | Moves object up one layer |
+| `send_backward` | Moves object down one layer |
+
+**Output:**
+```json
+{
+  "object_id": "shape-123",
+  "action": "bring_to_front",
+  "new_z_order": 2,
+  "total_layers": 3
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The modified object's ID |
+| `action` | string | The action performed (lowercase) |
+| `new_z_order` | number | New 0-based position (0 = furthest back) |
+| `total_layers` | number | Total number of objects on the slide |
+
+**Features:**
+- Action names are case-insensitive
+- Returns position information after change
+- Grouped objects cannot have z-order changed (API limitation)
+
+**Examples:**
+
+Bring to front:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "action": "bring_to_front"
+}
+```
+
+Move backward one layer:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz",
+  "action": "send_backward"
+}
+```
+
+**Errors:**
+- `invalid z-order action` - Invalid action specified
+- `cannot change z-order of grouped objects` - Object is inside a group
+- `object not found` - Object ID not found
+- `access denied` - No permission to modify
+- `failed to change z-order` - API error
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 
