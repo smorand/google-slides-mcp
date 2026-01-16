@@ -1389,7 +1389,7 @@
   - Replies are included
   - Anchor information is provided
   - 'Command: go test ./internal/tools/... -run TestListComments passes'
-  passes: false
+  passes: true
 - id: US-00057
   title: Implement tool to add comment
   priority: 17

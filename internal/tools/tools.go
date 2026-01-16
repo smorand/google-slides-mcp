@@ -74,6 +74,7 @@ type DriveService interface {
 	MoveFile(ctx context.Context, fileID string, folderID string) error
 	UploadFile(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error)
 	MakeFilePublic(ctx context.Context, fileID string) error
+	ListComments(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)
 }
 
 // DriveServiceFactory creates a Drive service from a token source.
@@ -167,6 +168,23 @@ func (s *realDriveService) MakeFilePublic(ctx context.Context, fileID string) er
 	}
 	_, err := s.service.Permissions.Create(fileID, permission).Context(ctx).Do()
 	return err
+}
+
+// ListComments lists comments on a file.
+func (s *realDriveService) ListComments(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error) {
+	call := s.service.Comments.List(fileID).
+		Fields("comments(id,kind,content,htmlContent,author,createdTime,modifiedTime,resolved,deleted,anchor,replies,quotedFileContent),nextPageToken").
+		IncludeDeleted(includeDeleted).
+		Context(ctx)
+
+	if pageSize > 0 {
+		call = call.PageSize(pageSize)
+	}
+	if pageToken != "" {
+		call = call.PageToken(pageToken)
+	}
+
+	return call.Do()
 }
 
 // NewRealDriveServiceFactory returns a factory that creates real Drive services.

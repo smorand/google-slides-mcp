@@ -1969,3 +1969,65 @@ Animations can only be managed through the Google Slides UI (View > Motion or In
 - 1-based slide indexing kept consistent with other tools for human-friendly API
 
 **Remaining issues:** None
+
+---
+
+## US-00056: Implement tool to list comments
+
+**Status:** ✅ Completed
+
+**Implementation Date:** 2026-01-16
+
+**Files Created:**
+- `internal/tools/list_comments.go` - Main implementation with:
+  - `ListCommentsInput` struct with presentation_id, include_resolved
+  - `ListCommentsOutput` struct with presentation_id, comments array, total_count, unresolved_count, resolved_count
+  - `CommentInfo` struct with comment_id, author, content, html_content, anchor_info, replies, resolved, deleted, created_time, modified_time
+  - `AuthorInfo` struct with display_name, email_address, photo_link
+  - `ReplyInfo` struct with reply_id, author, content, html_content, created_time, modified_time, deleted
+  - `ListComments` method using Drive API with pagination support
+  - Filtering logic to show only unresolved comments by default
+  - Statistics calculation (total, unresolved, resolved counts)
+  - Sentinel error: ErrListCommentsFailed
+
+- `internal/tools/list_comments_test.go` - Comprehensive test suite with 16 subtests:
+  - lists_all_unresolved_comments_by_default: verifies default behavior
+  - include_resolved_shows_resolved_comments: verifies include_resolved flag
+  - replies_are_included: verifies replies with author info
+  - anchor_information_is_provided: verifies anchor JSON string is preserved
+  - handles_pagination: verifies multiple API calls for paginated results
+  - returns_empty_list_when_no_comments: verifies empty state handling
+  - returns_error_for_empty_presentation_ID: validates input
+  - returns_error_when_presentation_not_found: handles 404
+  - returns_error_when_access_denied: handles 403
+  - returns_error_when_drive_service_fails: handles API errors
+  - handles_nil_author_gracefully: null safety
+  - handles_nil_comment_in_list_gracefully: null safety
+  - handles_nil_reply_in_list_gracefully: null safety
+  - includes_HTML_content_when_available: verifies HTML content preservation
+  - includes_deleted_flag_when_set: verifies deleted flag
+  - returns_presentation_ID_in_output: verifies output structure
+
+- `internal/tools/tools.go` - Extended DriveService interface:
+  - Added `ListComments(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)` method
+  - Added implementation in realDriveService using Drive API v3 Comments.List
+
+- `internal/tools/search_presentations_test.go` - Updated mockDriveService:
+  - Added ListCommentsFunc field for mocking
+  - Added ListComments method implementation
+
+- `CLAUDE.md` - Added list_comments documentation with input/output examples, features, sentinel errors, usage pattern, updated DriveService interface
+
+- `README.md` - Added list_comments documentation with detailed tool documentation and added to Collaboration section in tool summary
+
+- `stories.yaml` - Marked US-00056 as passes: true
+
+**Learnings:**
+- Comments in Google Slides are accessed via Drive API, not Slides API
+- Drive API Comments.List requires specific fields parameter for full data
+- Anchor information is provided as a JSON string from the API
+- By default, Drive API returns all non-deleted comments; filtering for resolved is done client-side
+- Pagination using NextPageToken follows same pattern as other tools
+- Replies are nested in each Comment object with their own Author info
+
+**Remaining issues:** None

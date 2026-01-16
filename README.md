@@ -4774,6 +4774,76 @@ There is no transition-related property available in the API.
 - `presentation_id is required` - Empty presentation ID
 
 ---
+
+#### `list_comments`
+
+List all comments in a presentation with replies and anchor information.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "include_resolved": false
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `include_resolved` | boolean | No | Include resolved comments (default: false) |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "comments": [
+    {
+      "comment_id": "AAAABxyz",
+      "author": {
+        "display_name": "John Doe",
+        "email_address": "john@example.com",
+        "photo_link": "https://..."
+      },
+      "content": "This slide needs more details",
+      "html_content": "<p>This slide needs more details</p>",
+      "anchor_info": "{\"r\":\"headings\",\"a\":[{\"startIndex\":5}]}",
+      "replies": [
+        {
+          "reply_id": "AAAACxyz",
+          "author": {
+            "display_name": "Jane Doe",
+            "email_address": "jane@example.com"
+          },
+          "content": "I'll add more content",
+          "created_time": "2024-01-15T11:00:00Z"
+        }
+      ],
+      "resolved": false,
+      "created_time": "2024-01-15T10:00:00Z",
+      "modified_time": "2024-01-15T11:00:00Z"
+    }
+  ],
+  "total_count": 5,
+  "unresolved_count": 3,
+  "resolved_count": 2
+}
+```
+
+**Features:**
+- Lists all comments using Drive API (comments are stored in Drive, not Slides API)
+- By default, only returns unresolved comments
+- Includes all replies for each comment with author information
+- Provides anchor information as JSON string for positioned comments
+- Handles pagination automatically to retrieve all comments
+- Returns statistics: total count, unresolved count, resolved count
+
+**Errors:**
+- `presentation_id is required` - Empty presentation ID
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to access the presentation
+- `drive API error` - Other Drive API errors
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 - `modify_table_structure` - Add/remove rows and columns from tables
@@ -4789,6 +4859,9 @@ There is no transition-related property available in the API.
 - `add_animation` - Create object animations
 - `manage_animations` - Manage animation order (list, reorder, modify, delete)
 - `manage_speaker_notes` - Get, set, append, or clear speaker notes
+
+### Collaboration
+- `list_comments` - List all comments in a presentation with replies and anchor info
 
 ## Configuration
 

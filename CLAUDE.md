@@ -4554,6 +4554,103 @@ output, err := tools.ManageSpeakerNotes(ctx, tokenSource, tools.ManageSpeakerNot
 })
 ```
 
+### list_comments Tool (`list_comments.go`)
+Lists all comments in a presentation.
+
+**Input:**
+```go
+tools.ListCommentsInput{
+    PresentationID:  "presentation-id",  // Required
+    IncludeResolved: false,              // Optional - include resolved comments (default: false)
+}
+```
+
+**Output:**
+```go
+tools.ListCommentsOutput{
+    PresentationID:  "presentation-id",
+    Comments:        []CommentInfo{...},
+    TotalCount:      10,                   // Total comments returned
+    UnresolvedCount: 7,                    // Count of unresolved comments
+    ResolvedCount:   3,                    // Count of resolved comments (only if include_resolved=true)
+}
+
+// Each comment contains:
+tools.CommentInfo{
+    CommentID:    "comment-123",
+    Author:       AuthorInfo{DisplayName: "John Doe", EmailAddress: "john@example.com", PhotoLink: "..."},
+    Content:      "This needs to be updated",
+    HTMLContent:  "<p>This needs to be updated</p>",  // Optional
+    AnchorInfo:   "{\"r\":\"headings\",...}",         // Optional - JSON string with anchor details
+    Replies:      []ReplyInfo{...},                   // Optional - array of replies
+    Resolved:     false,
+    Deleted:      false,                              // Optional
+    CreatedTime:  "2024-01-15T10:00:00Z",
+    ModifiedTime: "2024-01-15T11:00:00Z",             // Optional
+}
+
+// Author information:
+tools.AuthorInfo{
+    DisplayName:  "John Doe",
+    EmailAddress: "john@example.com",    // Optional
+    PhotoLink:    "https://...",         // Optional
+}
+
+// Reply information:
+tools.ReplyInfo{
+    ReplyID:      "reply-456",
+    Author:       AuthorInfo{...},
+    Content:      "Fixed!",
+    HTMLContent:  "<p>Fixed!</p>",       // Optional
+    CreatedTime:  "2024-01-15T11:00:00Z",
+    ModifiedTime: "2024-01-15T11:30:00Z", // Optional
+    Deleted:      false,                  // Optional
+}
+```
+
+**Features:**
+- Lists all comments in a presentation using Drive API (comments are stored in Drive, not Slides API)
+- By default, only returns unresolved comments
+- Set `include_resolved: true` to also include resolved comments
+- Includes all replies for each comment
+- Provides anchor information (JSON string) for positioned comments
+- Handles pagination automatically to retrieve all comments
+- Returns statistics: total count, unresolved count, resolved count
+
+**Sentinel Errors:**
+```go
+tools.ErrListCommentsFailed     // Generic comments listing failure
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to access
+tools.ErrDriveAPIError          // Drive API errors
+```
+
+**Usage Pattern:**
+```go
+// List only unresolved comments (default)
+output, err := tools.ListComments(ctx, tokenSource, tools.ListCommentsInput{
+    PresentationID: "abc123",
+})
+
+// List all comments including resolved ones
+output, err := tools.ListComments(ctx, tokenSource, tools.ListCommentsInput{
+    PresentationID:  "abc123",
+    IncludeResolved: true,
+})
+
+// Process comments
+fmt.Printf("Total: %d, Unresolved: %d, Resolved: %d\n",
+    output.TotalCount, output.UnresolvedCount, output.ResolvedCount)
+
+for _, comment := range output.Comments {
+    fmt.Printf("Comment by %s: %s\n", comment.Author.DisplayName, comment.Content)
+    for _, reply := range comment.Replies {
+        fmt.Printf("  Reply by %s: %s\n", reply.Author.DisplayName, reply.Content)
+    }
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
@@ -4566,6 +4663,7 @@ type DriveService interface {
     MoveFile(ctx context.Context, fileID string, folderID string) error
     UploadFile(ctx context.Context, name, mimeType string, content io.Reader) (*drive.File, error)
     MakeFilePublic(ctx context.Context, fileID string) error
+    ListComments(ctx context.Context, fileID string, includeDeleted bool, pageSize int64, pageToken string) (*drive.CommentList, error)
 }
 
 // Factory pattern
