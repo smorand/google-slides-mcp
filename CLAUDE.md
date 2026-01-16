@@ -3843,6 +3843,117 @@ output, err := tools.SetBackground(ctx, tokenSource, tools.SetBackgroundInput{
 fmt.Printf("Affected slides: %v\n", output.AffectedSlides)
 ```
 
+### configure_footer Tool (`configure_footer.go`)
+Configures footer elements (slide numbers, date, custom text) in a presentation.
+
+**Input:**
+```go
+tools.ConfigureFooterInput{
+    PresentationID:  "presentation-id",    // Required
+    ShowSlideNumber: &true,                // Optional - enable/disable slide numbers
+    ShowDate:        &true,                // Optional - enable/disable date display
+    DateFormat:      "January 2, 2006",    // Optional - Go date format (default: "January 2, 2006")
+    FooterText:      &text,                // Optional - custom footer text (nil = don't change, "" = clear)
+    ApplyTo:         "all",                // Optional: "all", "title_slides_only", "exclude_title_slides"
+}
+```
+
+**Output:**
+```go
+tools.ConfigureFooterOutput{
+    Success:             true,
+    Message:             "Footer configuration updated successfully (slide numbers: 3, dates: 3, footers: 3)",
+    UpdatedSlideNumbers: 3,                    // Count of slide number placeholders updated
+    UpdatedDates:        3,                    // Count of date placeholders updated
+    UpdatedFooters:      3,                    // Count of footer text placeholders updated
+    AffectedSlideIDs:    []string{"slide-1"},  // Slide IDs that were modified
+    AppliedTo:           "all",                // The apply_to value used
+}
+```
+
+**Apply To Options:**
+| Option | Description |
+|--------|-------------|
+| `all` | Apply to all slides (default) |
+| `title_slides_only` | Apply only to title slides (TITLE, TITLE_SLIDE, SECTION_HEADER layouts) |
+| `exclude_title_slides` | Apply to all slides except title slides |
+
+**Important API Limitation:**
+Footer placeholders must exist in the presentation's master/layout. This tool cannot create placeholders - it only modifies existing ones. If a presentation doesn't have footer placeholders in its theme, this tool will return an error.
+
+**Features:**
+- Enable/disable slide numbers by setting placeholder text to "#" or clearing it
+- Set date with customizable Go date format (e.g., "2006-01-02", "January 2, 2006")
+- Set custom footer text (use empty string to clear)
+- Apply to all slides, title slides only, or exclude title slides
+- At least one of show_slide_number, show_date, or footer_text must be provided
+- Uses DeleteText followed by InsertText to update placeholder content
+
+**Sentinel Errors:**
+```go
+tools.ErrConfigureFooterFailed  // Generic footer configuration failure
+tools.ErrInvalidApplyTo         // Invalid apply_to value (not 'all', 'title_slides_only', or 'exclude_title_slides')
+tools.ErrNoFooterChanges        // No changes specified (provide at least one option)
+tools.ErrNoFooterPlaceholders   // No footer placeholders found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Enable slide numbers on all slides
+showSlideNumber := true
+output, err := tools.ConfigureFooter(ctx, tokenSource, tools.ConfigureFooterInput{
+    PresentationID:  "abc123",
+    ShowSlideNumber: &showSlideNumber,
+})
+
+// Set date with custom format
+showDate := true
+output, err := tools.ConfigureFooter(ctx, tokenSource, tools.ConfigureFooterInput{
+    PresentationID: "abc123",
+    ShowDate:       &showDate,
+    DateFormat:     "2006-01-02",  // ISO format
+})
+
+// Set custom footer text
+footerText := "Confidential - Company Name"
+output, err := tools.ConfigureFooter(ctx, tokenSource, tools.ConfigureFooterInput{
+    PresentationID: "abc123",
+    FooterText:     &footerText,
+})
+
+// Apply footer only to title slides
+footerText := "Title Slide Footer"
+output, err := tools.ConfigureFooter(ctx, tokenSource, tools.ConfigureFooterInput{
+    PresentationID: "abc123",
+    FooterText:     &footerText,
+    ApplyTo:        "title_slides_only",
+})
+
+// Disable slide numbers and date on non-title slides
+showSlideNumber := false
+showDate := false
+output, err := tools.ConfigureFooter(ctx, tokenSource, tools.ConfigureFooterInput{
+    PresentationID:  "abc123",
+    ShowSlideNumber: &showSlideNumber,
+    ShowDate:        &showDate,
+    ApplyTo:         "exclude_title_slides",
+})
+
+// Clear footer text
+emptyText := ""
+output, err := tools.ConfigureFooter(ctx, tokenSource, tools.ConfigureFooterInput{
+    PresentationID: "abc123",
+    FooterText:     &emptyText,
+})
+
+fmt.Printf("Updated: slide_numbers=%d, dates=%d, footers=%d\n",
+    output.UpdatedSlideNumbers, output.UpdatedDates, output.UpdatedFooters)
+```
+
 ### transform_object Tool (`transform_object.go`)
 Moves, resizes, or rotates any object.
 

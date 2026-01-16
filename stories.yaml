@@ -1268,7 +1268,7 @@
   - Custom footer text is applied
   - Apply_to options work correctly
   - 'Command: go test ./internal/tools/... -run TestConfigureFooter passes'
-  passes: false
+  passes: true
 - id: US-00052
   title: Implement tool to set slide transition
   priority: 14

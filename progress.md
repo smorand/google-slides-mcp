@@ -1733,3 +1733,38 @@ Implemented `set_background` MCP tool that sets the background for one or all sl
 - Drive service factory pattern allows easy mocking in tests
 
 **Remaining issues:** None
+
+## 2026-01-16 - US-00051 - Implement tool to configure slide footer
+
+**Status:** Success
+
+**What was implemented:**
+- Created configure_footer tool to manage slide footer elements (slide numbers, date, custom text)
+- Input parameters:
+  - presentation_id (required)
+  - show_slide_number (bool, optional) - enable/disable slide numbers
+  - show_date (bool, optional) - enable/disable date display
+  - date_format (string, optional) - Go date format (default: "January 2, 2006")
+  - footer_text (string pointer, optional) - custom footer text (nil = don't change, "" = clear)
+  - apply_to (string, optional) - "all", "title_slides_only", or "exclude_title_slides" (default: "all")
+- Output: success, message, updated counts for each placeholder type, affected slide IDs, applied_to value
+- Implemented using placeholder modification (DeleteText + InsertText requests)
+- Properly identifies title slides by checking layout names (TITLE, TITLE_SLIDE, SECTION_HEADER only - not TITLE_AND_BODY, TITLE_ONLY, etc.)
+- Falls back to checking master and layout placeholders if no slide-level placeholders exist
+
+**Files changed:**
+- `internal/tools/configure_footer.go` - Tool implementation with ConfigureFooterInput/ConfigureFooterOutput structs, findFooterPlaceholders (with title slide detection), buildFooterUpdateRequests, isFooterPlaceholderType, footerPlaceholderInfo/footerUpdateStats helper types
+- `internal/tools/configure_footer_test.go` - Comprehensive tests (11 test cases: show slide number enable/disable, show date with format enable/disable, footer text set/clear, apply_to all/title_slides_only/exclude_title_slides, validation errors, no placeholders error, presentation not found, access denied, batch update error, multiple updates, placeholders on master fallback)
+- `CLAUDE.md` - Added configure_footer documentation with input/output examples, apply_to options table, API limitations note, features, sentinel errors, usage patterns
+- `README.md` - Added configure_footer documentation with JSON input/output examples, parameter tables, apply_to options, API limitation note, error messages
+- `stories.yaml` - Marked US-00051 as passes: true
+
+**Learnings:**
+- Footer elements in Google Slides are placeholder shapes with types: FOOTER, SLIDE_NUMBER, DATE_AND_TIME
+- Placeholders cannot be created via API - they must exist in the master/layout
+- To "show" or "hide" footers, we modify the placeholder text content (insert "#" for slide numbers, formatted date for dates, or clear text to hide)
+- Title slide detection must be precise: "TITLE" layout is a title slide, but "TITLE_AND_BODY" is not - can't use string contains
+- When no slide-level placeholders exist, the tool falls back to checking masters and layouts
+- The apply_to filter allows targeting title slides only or excluding them, useful for different footer content on different slide types
+
+**Remaining issues:** None

@@ -4326,6 +4326,70 @@ Set gradient background:
 
 ---
 
+#### `configure_footer`
+
+Configure footer elements (slide numbers, date, custom text) in a presentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "show_slide_number": true,
+  "show_date": true,
+  "date_format": "January 2, 2006",
+  "footer_text": "Company Confidential",
+  "apply_to": "all"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `show_slide_number` | boolean | No | Enable/disable slide numbers |
+| `show_date` | boolean | No | Enable/disable date display |
+| `date_format` | string | No | Go date format string (default: "January 2, 2006") |
+| `footer_text` | string | No | Custom footer text (null = don't change, "" = clear) |
+| `apply_to` | string | No | "all", "title_slides_only", or "exclude_title_slides" (default: "all") |
+
+**Output:**
+```json
+{
+  "success": true,
+  "message": "Footer configuration updated successfully (slide numbers: 3, dates: 3, footers: 3)",
+  "updated_slide_numbers": 3,
+  "updated_dates": 3,
+  "updated_footers": 3,
+  "affected_slide_ids": ["slide-1", "slide-2", "slide-3"],
+  "applied_to": "all"
+}
+```
+
+**Features:**
+- Enable/disable slide numbers by setting placeholder text to "#" or clearing it
+- Set date with customizable Go date format
+- Set custom footer text or clear it with empty string
+- Apply to all slides, title slides only, or exclude title slides
+- At least one of show_slide_number, show_date, or footer_text must be provided
+
+**Apply To Options:**
+| Option | Description |
+|--------|-------------|
+| `all` | Apply to all slides (default) |
+| `title_slides_only` | Apply only to title slides (TITLE, TITLE_SLIDE, SECTION_HEADER layouts) |
+| `exclude_title_slides` | Apply to all slides except title slides |
+
+**Important API Limitation:**
+Footer placeholders must exist in the presentation's master/layout. This tool cannot create placeholders - it only modifies existing ones.
+
+**Errors:**
+- `invalid apply_to value` - Must be "all", "title_slides_only", or "exclude_title_slides"
+- `no footer changes specified` - Provide at least one of show_slide_number, show_date, or footer_text
+- `no footer placeholders found` - Presentation doesn't have footer placeholders in its theme
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to modify
+
+---
+
 #### `transform_object`
 
 Move, resize, or rotate any object.
@@ -4668,6 +4732,7 @@ Delete with both (all unique IDs):
 ### Styling and Themes
 - `apply_theme` - Apply presentation themes
 - `set_background` - Configure backgrounds
+- `configure_footer` - Configure slide footers (numbers, date, text)
 - `set_transition` - Add slide transitions
 - `add_animation` - Create object animations
 
