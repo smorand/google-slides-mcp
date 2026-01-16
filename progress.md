@@ -1386,3 +1386,33 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00042 - Implement tool to create table
+
+**Status:** Success
+
+**What was implemented:**
+- New `create_table` MCP tool to create tables on slides
+- CreateTableInput struct with: presentation_id, slide_index/slide_id, rows, columns, position, size
+- CreateTableOutput struct with: object_id, rows, columns
+- Uses `CreateTableRequest` in Google Slides API BatchUpdate
+- Support for optional position and size (in points, converted to EMU)
+- Comprehensive test suite with 20 test cases
+
+**Files changed:**
+- `internal/tools/create_table.go` - Tool implementation
+- `internal/tools/create_table_test.go` - Comprehensive tests
+- `CLAUDE.md` - Added create_table documentation
+- `README.md` - Added create_table tool documentation
+- `stories.yaml` - Marked US-00042 as passes: true
+
+**Learnings:**
+- CreateTableRequest in Google Slides API requires rows and columns as int64
+- Position is specified via AffineTransform with translateX/translateY in EMU
+- Size is specified via Size with Width/Height Dimensions in EMU
+- Table object ID is generated using timestamp-based pattern like other tools
+- Test patterns from create_shape_test.go can be reused for similar element creation tools
+
+**Remaining issues:** None
+
+---
