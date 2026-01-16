@@ -49,7 +49,6 @@ locals {
   log_level      = lookup(local.parameters, "log_level", "info")
   rate_limit_rps = lookup(local.parameters, "rate_limit_rps", "100")
 
-  # Artifact Registry
-  artifact_registry_name = local.project_name
-  mcp_image              = "${local.location}-docker.pkg.dev/${local.project_id}/${local.artifact_registry_name}/${local.project_name}:latest"
+  # Docker image in Artifact Registry
+  docker_image = "${local.location}-docker.pkg.dev/${local.project_id}/${local.prefix}-${local.project_name}-${local.env}/${local.project_name}:latest"
 }

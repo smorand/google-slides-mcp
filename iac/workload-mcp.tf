@@ -1,19 +1,5 @@
 # Main Infrastructure - MCP Server Workload
-# Cloud Run, Secret Manager, Artifact Registry, Firestore
-
-# ============================================
-# ARTIFACT REGISTRY
-# ============================================
-
-resource "google_artifact_registry_repository" "mcp" {
-  location      = local.location
-  repository_id = local.artifact_registry_name
-  description   = "Docker images for ${local.description}"
-  format        = "DOCKER"
-  project       = local.project_id
-
-  labels = local.labels
-}
+# Cloud Run, Secret Manager, Firestore
 
 # ============================================
 # SECRET MANAGER
@@ -59,11 +45,10 @@ resource "google_firestore_database" "api_keys" {
 # ============================================
 
 resource "google_cloud_run_v2_service" "mcp" {
-  name                = local.mcp_name
-  location            = local.location
-  project             = local.project_id
-  ingress             = "INGRESS_TRAFFIC_ALL"
-  deletion_protection = false
+  name     = local.mcp_name
+  location = local.location
+  project  = local.project_id
+  ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
     service_account = local.cloudrun_sa_email
@@ -76,7 +61,7 @@ resource "google_cloud_run_v2_service" "mcp" {
     timeout = "${local.mcp_timeout}s"
 
     containers {
-      image = local.mcp_image
+      image = local.docker_image
 
       resources {
         limits = {
@@ -164,8 +149,9 @@ resource "google_cloud_run_v2_service" "mcp" {
   labels = local.labels
 
   depends_on = [
-    google_artifact_registry_repository.mcp,
+    google_artifact_registry_repository.docker,
     google_secret_manager_secret.oauth_credentials,
+    docker_registry_image.mcp,
   ]
 }
 
@@ -189,11 +175,6 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
 output "cloud_run_url" {
   value       = google_cloud_run_v2_service.mcp.uri
   description = "URL of the deployed Cloud Run service"
-}
-
-output "artifact_registry_url" {
-  value       = "${local.location}-docker.pkg.dev/${local.project_id}/${google_artifact_registry_repository.mcp.repository_id}"
-  description = "URL of the Artifact Registry repository"
 }
 
 output "oauth_secret_name" {

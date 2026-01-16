@@ -27,15 +27,11 @@ make vet      # Run go vet
 make check    # Run all checks (fmt, vet, lint, test)
 make clean    # Remove build artifacts
 
-# Docker
-docker build -t google-slides-mcp .
-docker run -p 8080:8080 google-slides-mcp
-
 # Terraform (two-phase deployment)
 make init-plan    # Plan bootstrap (state bucket, service accounts)
 make init-deploy  # Deploy bootstrap + generate iac/provider.tf
 make plan         # Plan main infrastructure
-make deploy       # Deploy main infrastructure
+make deploy       # Deploy main infrastructure (includes Docker build via Cloud Build)
 make undeploy     # Destroy main infrastructure
 ```
 

@@ -13,6 +13,10 @@ terraform {
       source  = "hashicorp/google-beta"
       version = "~> 5.0"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0, < 3.7"
+    }
   }
 
   # GCS Backend - bucket name injected by 'make init-deploy'
@@ -30,4 +34,13 @@ provider "google" {
 provider "google-beta" {
   project = local.project_id
   region  = local.location
+}
+
+# Docker provider for building and pushing images
+# Prerequisites: docker daemon running, gcloud auth configure-docker ${REGION}-docker.pkg.dev
+provider "docker" {
+  registry_auth {
+    address     = "${local.location}-docker.pkg.dev"
+    config_file = pathexpand("~/.docker/config.json")
+  }
 }
