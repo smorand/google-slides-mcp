@@ -20,6 +20,7 @@ Detailed documentation is available in `.agent_docs/`:
 ```bash
 make build    # Build for current platform
 make test     # Run all tests
+make test-integration  # Run integration tests (requires credentials)
 make run      # Build and run locally
 make fmt      # Format code
 make vet      # Run go vet
@@ -30,27 +31,41 @@ make clean    # Remove build artifacts
 docker build -t google-slides-mcp .
 docker run -p 8080:8080 google-slides-mcp
 
-# Terraform
-make plan     # Plan infrastructure changes
-make deploy   # Deploy infrastructure
-make undeploy # Destroy infrastructure
+# Terraform (two-phase deployment)
+make init-plan    # Plan bootstrap (state bucket, service accounts)
+make init-deploy  # Deploy bootstrap + generate iac/provider.tf
+make plan         # Plan main infrastructure
+make deploy       # Deploy main infrastructure
+make undeploy     # Destroy main infrastructure
 ```
 
 ## Project Structure
 
 ```
 google-slides-mcp/
-├── cmd/google-slides-mcp/    # Entry point only - minimal code
-├── internal/                 # All implementation code
-│   ├── auth/                # OAuth2 flow, API key generation
-│   ├── cache/               # In-memory LRU caching with TTL
-│   ├── middleware/          # API key validation, logging
-│   ├── permissions/         # Drive permission checks
-│   ├── ratelimit/           # Token bucket rate limiting
-│   ├── retry/               # Exponential backoff retry
-│   ├── tools/               # MCP tool implementations
-│   └── transport/           # HTTP server, MCP protocol
-├── terraform/               # GCP infrastructure (Terraform)
+├── config.yaml              # Single source of truth for all config
+├── cmd/google-slides-mcp/   # Entry point only - minimal code
+├── internal/                # All implementation code
+│   ├── auth/               # OAuth2 flow, API key generation
+│   ├── cache/              # In-memory LRU caching with TTL
+│   ├── integration/        # Integration tests
+│   ├── middleware/         # API key validation, logging
+│   ├── permissions/        # Drive permission checks
+│   ├── ratelimit/          # Token bucket rate limiting
+│   ├── retry/              # Exponential backoff retry
+│   ├── tools/              # MCP tool implementations
+│   └── transport/          # HTTP server, MCP protocol
+├── init/                    # Terraform Phase 1: Bootstrap
+│   ├── provider.tf         # Local backend
+│   ├── local.tf            # Loads ../config.yaml
+│   ├── state-backend.tf    # GCS bucket for state
+│   ├── services-apis.tf    # Enable GCP APIs
+│   └── services-accounts.tf # Service accounts + IAM
+├── iac/                     # Terraform Phase 2: Infrastructure
+│   ├── provider.tf.template # Template with bucket placeholder
+│   ├── provider.tf          # Generated after init-deploy
+│   ├── local.tf             # Loads ../config.yaml
+│   └── workload-mcp.tf      # Cloud Run + Secrets + Firestore
 ├── .agent_docs/             # Detailed documentation for AI agents
 └── scripts/                 # Utility scripts
 ```

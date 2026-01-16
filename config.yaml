@@ -1,0 +1,68 @@
+# Google Slides MCP Server Configuration
+# Single source of truth for all terraform and application config
+
+# ============================================
+# GLOBAL CONFIGURATION
+# ============================================
+prefix: smogslides              # Consistent prefix: smo{project}
+project_name: gslides-mcp       # Short project identifier
+env: prd                        # Environment: dev, stg, prd
+description: Google Slides MCP Server - HTTP streamable MCP for Google Slides API
+
+# ============================================
+# GCP CONFIGURATION
+# ============================================
+project_id: project-3335b451-2ffb-4ece-8cd  # GCP project ID
+location: europe-west1                       # Primary region
+
+# APIs/Services to enable
+services:
+  - run.googleapis.com
+  - secretmanager.googleapis.com
+  - firestore.googleapis.com
+  - cloudbuild.googleapis.com
+  - cloudresourcemanager.googleapis.com
+  - iam.googleapis.com
+  - logging.googleapis.com
+  - monitoring.googleapis.com
+  - cloudtrace.googleapis.com
+  - slides.googleapis.com
+  - drive.googleapis.com
+  - translate.googleapis.com
+  - artifactregistry.googleapis.com
+
+# ============================================
+# RESOURCE CONFIGURATION
+# ============================================
+resources:
+  cpu: "1"
+  memory: 512Mi
+  min_instances: 0
+  max_instances: 5
+  timeout_seconds: 300
+  concurrency: 80
+
+# ============================================
+# APPLICATION PARAMETERS
+# ============================================
+parameters:
+  oauth_secret_name: smo-gslides-oauth-creds
+  cache_ttl: "5m"
+  max_retries: "5"
+  log_level: info
+  rate_limit_rps: "100"
+
+# ============================================
+# LABELS
+# ============================================
+labels:
+  environment: prd
+  team: data-ai
+  managed-by: terraform
+  app: gslides-mcp
+
+# ============================================
+# POST-DEPLOYMENT (update after first deploy)
+# ============================================
+# image: "europe-west1-docker.pkg.dev/project-3335b451-2ffb-4ece-8cd/gslides-mcp/gslides-mcp:latest"
+# base_url: "https://smogslides-gslides-mcp-prd-xxxxx-ew.a.run.app"

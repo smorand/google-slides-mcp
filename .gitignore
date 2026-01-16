@@ -39,8 +39,13 @@ progress.md
 .env.local
 *.local.json
 
-# Terraform state (managed separately)
-terraform/.terraform/
-terraform/*.tfstate
-terraform/*.tfstate.*
-terraform/*.tfplan
+# Terraform state and providers (managed separately)
+init/.terraform/
+init/*.tfstate
+init/*.tfstate.*
+init/*.tfplan
+iac/.terraform/
+iac/*.tfstate
+iac/*.tfstate.*
+iac/*.tfplan
+iac/provider.tf

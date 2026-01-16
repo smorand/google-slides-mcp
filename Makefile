@@ -499,42 +499,82 @@ endif
 	@echo ""
 	@echo "Launcher scripts (.sh) automatically detect platform and execute the right binary."
 	@echo ""
-	@echo "Terraform targets (see terraform/ directory):"
-	@echo "  plan             - Plan main infrastructure"
+	@echo "Terraform targets (two-phase deployment):"
+	@echo "  init-plan        - Plan bootstrap infrastructure (state bucket, service accounts)"
+	@echo "  init-deploy      - Deploy bootstrap + generate iac/provider.tf"
+	@echo "  init-destroy     - Destroy bootstrap infrastructure (DANGEROUS)"
+	@echo "  plan             - Plan main infrastructure (requires init-deploy first)"
 	@echo "  deploy           - Deploy main infrastructure"
 	@echo "  undeploy         - Destroy main infrastructure"
-	@echo "  init-plan        - Plan initialization"
-	@echo "  init-deploy      - Deploy initialization"
-	@echo "  init-destroy     - Destroy initialization (careful!)"
-	@echo "  update-backend   - Regenerate backend configuration"
+	@echo "  update-backend   - Regenerate iac/provider.tf from init/ outputs"
 
 # ============================================
-# TERRAFORM TARGETS
+# TERRAFORM TARGETS (Two-Phase Deployment)
 # ============================================
+# Phase 1 (init/): Bootstrap - run once per GCP project
+#   - GCS bucket for terraform state
+#   - Service accounts and IAM roles
+#   - Enable required GCP APIs
+#
+# Phase 2 (iac/): Main infrastructure - can be redeployed
+#   - Cloud Run service
+#   - Secret Manager secrets
+#   - Artifact Registry
+#   - Firestore database
 
-# IAC targets (main infrastructure)
-plan:
-	@echo "Planning main infrastructure..."
-	cd terraform && terraform init && terraform plan
+# Guard: Check if init/ has been deployed
+check-init:
+	@if [ ! -d "init/.terraform" ]; then \
+		echo "Error: init/ not initialized. Run 'make init-deploy' first."; \
+		exit 1; \
+	fi
 
-deploy:
-	@echo "Deploying main infrastructure..."
-	cd terraform && terraform init && terraform apply -auto-approve
+# Phase 1: Bootstrap infrastructure
+init-plan:
+	@echo "Planning bootstrap infrastructure..."
+	cd init && terraform init && terraform plan
 
-undeploy:
-	@echo "Destroying main infrastructure..."
-	cd terraform && terraform destroy -auto-approve
+init-deploy:
+	@echo "Deploying bootstrap infrastructure..."
+	cd init && terraform init && terraform apply -auto-approve
+	@echo ""
+	@echo "Generating iac/provider.tf with state bucket..."
+	@$(MAKE) update-backend
+	@echo ""
+	@echo "Bootstrap complete! Next steps:"
+	@echo "  1. Run 'make plan' to review main infrastructure"
+	@echo "  2. Run 'make deploy' to deploy main infrastructure"
 
-# Init targets (backend, state, service accounts)
-# Note: For this project, we use a single terraform folder structure
-# The init targets are aliases for the main terraform folder
-init-plan: plan
+init-destroy:
+	@echo "WARNING: This will destroy the terraform state bucket!"
+	@echo "All terraform state for iac/ will be LOST."
+	@read -p "Are you sure? (type 'yes' to confirm): " confirm && \
+		if [ "$$confirm" = "yes" ]; then \
+			cd init && terraform destroy; \
+		else \
+			echo "Cancelled."; \
+		fi
 
-init-deploy: deploy
-
-init-destroy: undeploy
-
-# Update backend configuration (manual trigger)
+# Update backend configuration from init/ outputs
 update-backend:
-	@echo "Backend configuration is managed in terraform/provider.tf"
-	@echo "Uncomment the backend block after initial deployment"
+	@echo "Updating iac/provider.tf with state bucket from init/..."
+	@BUCKET=$$(cd init && terraform output -raw state_bucket_name 2>/dev/null); \
+	if [ -z "$$BUCKET" ]; then \
+		echo "Error: Could not get state bucket name. Run 'make init-deploy' first."; \
+		exit 1; \
+	fi; \
+	sed "s/TFSTATE_BUCKET_PLACEHOLDER/$$BUCKET/" iac/provider.tf.template > iac/provider.tf; \
+	echo "Generated iac/provider.tf with bucket: $$BUCKET"
+
+# Phase 2: Main infrastructure
+plan: check-init
+	@echo "Planning main infrastructure..."
+	cd iac && terraform init && terraform plan
+
+deploy: check-init
+	@echo "Deploying main infrastructure..."
+	cd iac && terraform init && terraform apply -auto-approve
+
+undeploy: check-init
+	@echo "Destroying main infrastructure..."
+	cd iac && terraform destroy -auto-approve

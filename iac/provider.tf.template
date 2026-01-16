@@ -1,8 +1,8 @@
-# Terraform Provider Configuration
-# Defines the required providers and backend configuration
+# Terraform Provider Configuration - Main Infrastructure
+# Uses GCS backend (bucket created by init/)
 
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.5.0"
 
   required_providers {
     google = {
@@ -15,11 +15,11 @@ terraform {
     }
   }
 
-  # Backend configuration - uncomment after init-deploy creates the bucket
-  # backend "gcs" {
-  #   bucket = "gslides-tfstate-ew1-dev"
-  #   prefix = "terraform/state"
-  # }
+  # GCS Backend - bucket name injected by 'make init-deploy'
+  backend "gcs" {
+    bucket = "TFSTATE_BUCKET_PLACEHOLDER"
+    prefix = "terraform/state"
+  }
 }
 
 provider "google" {

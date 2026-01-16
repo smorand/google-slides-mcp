@@ -2,78 +2,115 @@
 
 ## Overview
 
-The project deploys to Google Cloud Run using Terraform for infrastructure management.
+The project deploys to Google Cloud Run using a **two-phase Terraform deployment** pattern for infrastructure management.
 
 ---
 
 ## Terraform Structure
 
 ```
-terraform/
-├── config.yaml      # Single source of configuration
-├── provider.tf      # Google provider and backend
-├── local.tf         # Loads config.yaml, defines derived values
-├── apis.tf          # Enables required Google APIs
-├── iam.tf           # Service accounts for Cloud Run and Cloud Build
-├── cloudrun.tf      # MCP server deployment
-├── firestore.tf     # Database for API keys and tokens
-└── secrets.tf       # OAuth2 credentials storage
+google-slides-mcp/
+├── config.yaml              # Single source of truth (project root)
+├── Makefile                 # 7 terraform targets
+├── init/                    # Phase 1: Bootstrap (one-time per GCP project)
+│   ├── provider.tf         # Local backend
+│   ├── local.tf            # Loads ../config.yaml
+│   ├── state-backend.tf    # GCS bucket for terraform state
+│   ├── services-apis.tf    # Enable required GCP APIs
+│   └── services-accounts.tf # Service accounts + IAM
+└── iac/                     # Phase 2: Main infrastructure
+    ├── provider.tf.template # Template with bucket placeholder
+    ├── provider.tf          # Generated after init-deploy
+    ├── local.tf             # Loads ../config.yaml
+    └── workload-mcp.tf      # Cloud Run + Secrets + Firestore
 ```
+
+### Two-Phase Deployment
+
+| Phase | Directory | Purpose | Frequency |
+|-------|-----------|---------|-----------|
+| 1 - Bootstrap | `init/` | State bucket, service accounts, APIs | Once per GCP project |
+| 2 - Infrastructure | `iac/` | Cloud Run, secrets, Firestore | Each deployment |
 
 ---
 
 ## Configuration
 
-Edit `terraform/config.yaml` to customize:
+Edit `config.yaml` at project root:
 
 ```yaml
-gcp:
-  project_id: "your-project-id"
-  location: "europe-west1"
-  resources:
-    cloud_run:
-      cpu: "1"
-      memory: "512Mi"
-      min_instances: 0
-      max_instances: 10
-      concurrency: 80
+# Global
+prefix: smogslides              # Resource naming prefix
+project_name: gslides-mcp       # Short project identifier
+env: prd                        # Environment: dev, stg, prd
 
+# GCP
+project_id: project-xxx         # GCP project ID
+location: europe-west1          # Primary region
+
+# Resources
+resources:
+  cpu: "1"
+  memory: 512Mi
+  min_instances: 0
+  max_instances: 5
+  timeout_seconds: 300
+  concurrency: 80
+
+# Application
 parameters:
-  log_level: "info"
-  cors_origins: "*"
+  oauth_secret_name: smo-gslides-oauth-creds
+  cache_ttl: "5m"
+  log_level: info
 ```
 
-### Key Configuration Options
+### Naming Convention
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `gcp.project_id` | Your GCP project ID | Required |
-| `gcp.location` | GCP region | europe-west1 |
-| `cloud_run.cpu` | CPU allocation | 1 |
-| `cloud_run.memory` | Memory allocation | 512Mi |
-| `cloud_run.min_instances` | Minimum instances | 0 |
-| `cloud_run.max_instances` | Maximum instances | 10 |
-| `cloud_run.concurrency` | Requests per instance | 80 |
+Resources follow consistent naming patterns:
+
+| Resource | Pattern | Example |
+|----------|---------|---------|
+| State bucket | `smo-tfstate-{location_id}-{env}` | `smo-tfstate-ew1-prd` |
+| Service accounts | `{prefix}-{service}-{env}` | `smogslides-cloudrun-prd` |
+| Cloud Run | `{prefix}-{project_name}-{env}` | `smogslides-gslides-mcp-prd` |
+| OAuth secret | `smo-{project}-oauth-creds` | `smo-gslides-oauth-creds` |
 
 ---
 
 ## Deployment Commands
 
-### Using Makefile
+### First-Time Setup (Bootstrap)
 
 ```bash
-make plan     # Preview infrastructure changes
-make deploy   # Apply changes
-make undeploy # Destroy resources
+# 1. Review bootstrap infrastructure
+make init-plan
+
+# 2. Deploy bootstrap (creates state bucket, service accounts)
+make init-deploy
+# This also generates iac/provider.tf with the correct bucket name
+
+# 3. Review main infrastructure
+make plan
+
+# 4. Deploy main infrastructure
+make deploy
 ```
 
-### Using Terraform Directly
+### Subsequent Deployments
 
 ```bash
-cd terraform
-terraform init
-terraform plan
-terraform apply
+make plan    # Review changes
+make deploy  # Apply changes
+```
+
+### Teardown
+
+```bash
+# Destroy main infrastructure only
+make undeploy
+
+# Destroy EVERYTHING including state bucket (DANGEROUS)
+make init-destroy
 ```
 
 ---
@@ -85,69 +122,46 @@ terraform apply
 Multi-stage build for minimal image size and security:
 
 1. **Builder stage** (`golang:1.21-alpine`):
-   - Installs ca-certificates and git for module downloads
-   - Copies and downloads Go dependencies
    - Builds static binary with CGO_ENABLED=0
    - Supports build args: VERSION, COMMIT_SHA, BUILD_TIME
 
 2. **Runtime stage** (`gcr.io/distroless/static-debian12:nonroot`):
    - Distroless image for minimal attack surface
    - Runs as non-root user (UID 65532)
-   - Contains only the binary and CA certificates
 
-### Build Arguments
-
-```bash
-docker build \
-  --build-arg VERSION=1.0.0 \
-  --build-arg COMMIT_SHA=$(git rev-parse HEAD) \
-  --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-  -t google-slides-mcp .
-```
-
-### Local Docker Run
+### Build and Push
 
 ```bash
+# Build locally
 docker build -t google-slides-mcp .
-docker run -p 8080:8080 google-slides-mcp
+
+# Tag and push to Artifact Registry
+docker tag google-slides-mcp \
+  europe-west1-docker.pkg.dev/project-xxx/gslides-mcp/gslides-mcp:latest
+
+docker push \
+  europe-west1-docker.pkg.dev/project-xxx/gslides-mcp/gslides-mcp:latest
 ```
 
 ---
 
-## Cloud Build
+## Secrets Management
 
-`cloudbuild.yaml` defines the CI/CD pipeline:
+OAuth2 credentials are stored in Secret Manager.
 
-1. **test**: Run `go test -race` with coverage
-2. **build**: Build Docker image with version tags
-3. **push**: Push to Artifact Registry
-4. **deploy**: Deploy to Cloud Run
+### Initial Setup
 
-### Substitutions
-
-- `_REGION`: GCP region (default: europe-west1)
-- `_SERVICE_NAME`: Cloud Run service name (default: google-slides-mcp)
-
-### Manual Trigger
+1. Create OAuth2 credentials in Google Cloud Console
+2. Download the JSON file
+3. Add to Secret Manager:
 
 ```bash
-gcloud builds submit --config=cloudbuild.yaml
+gcloud secrets versions add smo-gslides-oauth-creds \
+  --data-file=$HOME/.credentials/smo-gslides-oauth.json \
+  --project=project-3335b451-2ffb-4ece-8cd
 ```
 
----
-
-## Required GCP APIs
-
-The following APIs are enabled automatically via `apis.tf`:
-
-- Cloud Run API
-- Cloud Build API
-- Artifact Registry API
-- Firestore API
-- Secret Manager API
-- Slides API
-- Drive API
-- Cloud Translation API
+**Note:** Secret versions are created manually (not via Terraform) to avoid storing sensitive data in terraform state.
 
 ---
 
@@ -155,57 +169,19 @@ The following APIs are enabled automatically via `apis.tf`:
 
 ### Cloud Run Service Account
 
-The service account for Cloud Run has:
-- `roles/datastore.user` - Firestore access for API keys
+Created in `init/services-accounts.tf`:
 - `roles/secretmanager.secretAccessor` - Access OAuth credentials
-- `roles/cloudtranslate.user` - Translation API access
+- `roles/datastore.user` - Firestore access for API keys
+- `roles/cloudtrace.agent` - Distributed tracing
+- `roles/logging.logWriter` - Cloud Logging
+- `roles/monitoring.metricWriter` - Cloud Monitoring
 
 ### Cloud Build Service Account
 
-- `roles/run.admin` - Deploy to Cloud Run
-- `roles/iam.serviceAccountUser` - Act as service account
 - `roles/artifactregistry.writer` - Push container images
-
----
-
-## Secrets Management
-
-OAuth2 credentials are stored in Secret Manager:
-
-- `oauth-client-id` - Google OAuth2 client ID
-- `oauth-client-secret` - Google OAuth2 client secret
-
-### Setting Up Secrets
-
-```bash
-# Create secrets (first time)
-echo -n "your-client-id" | gcloud secrets create oauth-client-id --data-file=-
-echo -n "your-client-secret" | gcloud secrets create oauth-client-secret --data-file=-
-
-# Update secrets
-echo -n "new-client-id" | gcloud secrets versions add oauth-client-id --data-file=-
-```
-
----
-
-## Firestore Setup
-
-The Firestore database stores:
-- API keys
-- Refresh tokens
-- User email associations
-- Usage timestamps
-
-Collection structure:
-```
-api_keys/
-  {api_key}/
-    api_key: string
-    refresh_token: string
-    user_email: string
-    created_at: timestamp
-    last_used: timestamp
-```
+- `roles/run.developer` - Deploy to Cloud Run
+- `roles/iam.serviceAccountUser` - Act as Cloud Run service account
+- `roles/cloudbuild.builds.builder` - Execute builds
 
 ---
 
@@ -215,105 +191,62 @@ Cloud Run environment variables (set via Terraform):
 
 | Variable | Description |
 |----------|-------------|
-| `GCP_PROJECT_ID` | GCP project ID |
-| `FIRESTORE_COLLECTION` | API keys collection name |
-| `LOG_LEVEL` | Logging level (debug, info, warn, error) |
-| `CORS_ORIGINS` | Allowed CORS origins |
+| `GOOGLE_CLOUD_PROJECT` | GCP project ID |
+| `OAUTH_SECRET_NAME` | Secret Manager secret name |
+| `CACHE_TTL` | Cache duration (e.g., "5m") |
+| `MAX_RETRIES` | API retry count |
+| `LOG_LEVEL` | Logging level |
+| `RATE_LIMIT_RPS` | Rate limit per second |
 
 ---
 
 ## Health Checks
 
-Cloud Run performs health checks on:
-- **Startup probe**: `GET /health`
-- **Liveness probe**: `GET /health`
+Cloud Run probes:
+- **Startup probe**: `GET /health` (initial delay: 5s)
+- **Liveness probe**: `GET /health` (period: 30s)
 
 Response: `{"status": "healthy"}`
 
 ---
 
-## Scaling Configuration
+## Troubleshooting
 
-### Cold Start Optimization
+### Common Issues
 
-- Set `min_instances: 1` for production to avoid cold starts
-- Use `cpu_idle: false` for consistent performance
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "init/ not initialized" | Missing bootstrap | Run `make init-deploy` |
+| "Permission denied" | Missing IAM roles | Check service account |
+| "Container failed to start" | Missing secret | Add OAuth credentials |
+| "Health check failed" | App crash | Check Cloud Run logs |
 
-### Concurrency Tuning
+### Viewing Logs
 
-- Default concurrency: 80 requests per instance
-- Adjust based on memory usage and response times
-- Monitor with Cloud Run metrics
+```bash
+# Stream logs
+gcloud run services logs tail smogslides-gslides-mcp-prd
 
----
+# View recent logs
+gcloud logging read "resource.type=cloud_run_revision" --limit=100
+```
 
-## Monitoring
-
-### Recommended Alerts
-
-1. **Error rate** > 1% over 5 minutes
-2. **Latency** p95 > 5 seconds
-3. **Instance count** approaching max
-4. **Memory usage** > 80%
-
-### Logging
-
-Structured logs are sent to Cloud Logging:
-- Request/response logging
-- Error traces
-- API call metrics
-
----
-
-## Rollback
-
-### Using gcloud
+### Rollback
 
 ```bash
 # List revisions
-gcloud run revisions list --service=google-slides-mcp
+gcloud run revisions list --service=smogslides-gslides-mcp-prd
 
 # Route traffic to previous revision
-gcloud run services update-traffic google-slides-mcp \
-  --to-revisions=google-slides-mcp-00001-abc=100
-```
-
-### Using Terraform
-
-```bash
-# Revert to previous state
-git checkout HEAD~1 terraform/
-terraform apply
+gcloud run services update-traffic smogslides-gslides-mcp-prd \
+  --to-revisions=smogslides-gslides-mcp-prd-00001-abc=100
 ```
 
 ---
 
 ## Cost Optimization
 
-1. **Set min_instances: 0** for development/staging
-2. **Use CPU throttling** when idle (`cpu_idle: true`)
+1. **Set min_instances: 0** for development (scales to zero)
+2. **Enable CPU throttling** when idle (`cpu_idle: true`)
 3. **Right-size memory** based on actual usage
-4. **Enable request-based billing** (default)
-
----
-
-## Troubleshooting Deployment
-
-### Common Issues
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| "Permission denied" | Missing IAM roles | Check service account permissions |
-| "Container failed to start" | Missing env vars | Verify all required secrets exist |
-| "Health check failed" | App crash on startup | Check Cloud Run logs |
-| "Quota exceeded" | API quota limits | Request quota increase |
-
-### Viewing Logs
-
-```bash
-# Stream logs
-gcloud run services logs tail google-slides-mcp
-
-# View recent logs
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=google-slides-mcp" --limit=100
-```
+4. **Use request-based billing** (default)
