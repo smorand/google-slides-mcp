@@ -2449,6 +2449,118 @@ output, err := tools.AddVideo(ctx, tokenSource, tools.AddVideoInput{
 fmt.Printf("Created video: %s\n", output.ObjectID)
 ```
 
+### modify_video Tool (`modify_video.go`)
+Modifies properties of an existing video in a presentation.
+
+**Input:**
+```go
+tools.ModifyVideoInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "video-object-id",  // Required - ID of the video to modify
+    Properties:     &VideoModifyProperties{...},  // Required - properties to modify
+}
+
+// Properties to modify (at least one required):
+tools.VideoModifyProperties{
+    Position:  &PositionInput{X: 100, Y: 50},  // Optional - new position in points
+    Size:      &SizeInput{Width: 400, Height: 225},  // Optional - new size in points
+    StartTime: &30.0,   // Optional - start time in seconds
+    EndTime:   &120.0,  // Optional - end time in seconds
+    Autoplay:  &true,   // Optional - auto-play setting
+    Mute:      &false,  // Optional - mute setting
+}
+```
+
+**Output:**
+```go
+tools.ModifyVideoOutput{
+    ObjectID:           "video-object-id",
+    ModifiedProperties: []string{"position", "start_time", "autoplay"},  // List of modified properties
+}
+```
+
+**Features:**
+- Modify position and/or size via UpdatePageElementTransformRequest with ABSOLUTE mode
+- Modify video playback properties (start_time, end_time, autoplay, mute) via UpdateVideoPropertiesRequest
+- All properties are optional, but at least one must be specified
+- Validates all property ranges before making API calls
+- Position and size changes preserve other transform properties (scale, translate)
+- Time values are in seconds (converted to milliseconds for API)
+- 1 point = 12700 EMU (English Metric Units)
+
+**Sentinel Errors:**
+```go
+tools.ErrModifyVideoFailed      // Generic modification failure
+tools.ErrNotVideoObject         // Object is not a video
+tools.ErrNoVideoProperties      // No properties provided to modify
+tools.ErrInvalidVideoSize       // Size must have positive width and/or height, cannot be negative
+tools.ErrInvalidVideoPosition   // Position coordinates must be non-negative
+tools.ErrInvalidVideoTime       // Time values must be non-negative
+tools.ErrInvalidVideoTimeRange  // End time must be greater than start time
+tools.ErrObjectNotFound         // Object not found in presentation
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Modify video position and size
+output, err := tools.ModifyVideo(ctx, tokenSource, tools.ModifyVideoInput{
+    PresentationID: "abc123",
+    ObjectID:       "video-xyz",
+    Properties: &tools.VideoModifyProperties{
+        Position: &tools.PositionInput{X: 150, Y: 100},
+        Size:     &tools.SizeInput{Width: 500, Height: 280},
+    },
+})
+
+// Modify playback range (trim video)
+startTime := 30.0
+endTime := 120.0
+output, err := tools.ModifyVideo(ctx, tokenSource, tools.ModifyVideoInput{
+    PresentationID: "abc123",
+    ObjectID:       "video-xyz",
+    Properties: &tools.VideoModifyProperties{
+        StartTime: &startTime,
+        EndTime:   &endTime,
+    },
+})
+
+// Enable autoplay and mute
+autoplay := true
+mute := true
+output, err := tools.ModifyVideo(ctx, tokenSource, tools.ModifyVideoInput{
+    PresentationID: "abc123",
+    ObjectID:       "video-xyz",
+    Properties: &tools.VideoModifyProperties{
+        Autoplay: &autoplay,
+        Mute:     &mute,
+    },
+})
+
+// Modify all properties at once
+startTime := 10.0
+endTime := 60.0
+autoplay := true
+mute := false
+output, err := tools.ModifyVideo(ctx, tokenSource, tools.ModifyVideoInput{
+    PresentationID: "abc123",
+    ObjectID:       "video-xyz",
+    Properties: &tools.VideoModifyProperties{
+        Position:  &tools.PositionInput{X: 50, Y: 50},
+        Size:      &tools.SizeInput{Width: 640, Height: 360},
+        StartTime: &startTime,
+        EndTime:   &endTime,
+        Autoplay:  &autoplay,
+        Mute:      &mute,
+    },
+})
+
+fmt.Printf("Modified properties: %v\n", output.ModifiedProperties)
+```
+
 ### modify_image Tool (`modify_image.go`)
 Modifies properties of an existing image in a presentation.
 

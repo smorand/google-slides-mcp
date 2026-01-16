@@ -1613,3 +1613,42 @@ Implemented `add_video` MCP tool that adds YouTube or Google Drive videos to sli
 **Remaining issues:** None
 
 ---
+
+## US-00048: Implement tool to modify video properties
+
+**Status:** ✅ Completed
+
+**Implementation Summary:**
+Implemented `modify_video` MCP tool that modifies video playback properties (start_time, end_time, autoplay, mute) and position/size for existing videos.
+
+**Key Implementation Details:**
+- Input: presentation_id, object_id, properties object with optional fields
+- Properties: position (x, y), size (width, height), start_time, end_time, autoplay, mute
+- Position and size in points (converted to EMU for transform)
+- Time values in seconds (converted to milliseconds for API)
+- Uses UpdatePageElementTransformRequest with ABSOLUTE mode for position/size changes
+- Uses UpdateVideoPropertiesRequest with field masks for playback properties
+- Validates property ranges before making API calls
+- Preserves current transform values when only changing subset of properties
+- Returns list of modified properties for confirmation
+- Sentinel errors: ErrModifyVideoFailed, ErrNotVideoObject, ErrNoVideoProperties
+- Reuses existing errors: ErrInvalidVideoSize, ErrInvalidVideoPosition, ErrInvalidVideoTime, ErrInvalidVideoTimeRange
+
+**Files changed:**
+- `internal/tools/modify_video.go` - Tool implementation with ModifyVideoInput/VideoModifyProperties/ModifyVideoOutput structs, validation (validateVideoModifyProperties), transform builder (buildVideoTransformRequest), video properties builder (buildModifyVideoPropertiesRequest)
+- `internal/tools/modify_video_test.go` - Comprehensive tests (22 test cases: start/end times, autoplay/mute, disable autoplay/mute, position/size, all properties, preserving current values, validation errors for presentation/object/properties/times/size/position, API errors)
+- `CLAUDE.md` - Added modify_video documentation with input/output examples, features, sentinel errors, usage patterns
+- `README.md` - Added modify_video documentation with JSON input/output examples, parameter table, features, use cases, examples, error messages
+- `stories.yaml` - Marked US-00048 as passes: true
+
+**Learnings:**
+- Followed modify_image pattern for structure (validate input, find object, verify type, build requests, batch update)
+- Video transform uses same ABSOLUTE mode as images for position/size changes
+- Preserving current scale values when only changing position requires reading existing transform
+- Negative size values need explicit check separate from "both zero" check for proper validation
+- UpdateVideoPropertiesRequest Fields uses comma-separated string (e.g., "start,end,autoPlay,mute")
+- API field names differ from user-facing names (autoPlay vs autoplay, start vs start_time)
+
+**Remaining issues:** None
+
+---

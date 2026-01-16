@@ -1187,7 +1187,7 @@
   - Mute setting can be changed
   - Position and size can be changed
   - 'Command: go test ./internal/tools/... -run TestModifyVideo passes'
-  passes: false
+  passes: true
 - id: US-00049
   title: Implement tool to apply theme
   priority: 13
