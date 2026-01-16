@@ -1816,3 +1816,50 @@ The Google Slides API does NOT support setting slide transitions. Investigation 
 - Duration validation (0-10 seconds) matches Google Slides UI limits
 
 **Remaining issues:** None - this is an API limitation, not a bug
+
+---
+
+## 2026-01-16 - US-00053 - Implement tool to add object animation
+
+**Status:** Success
+
+**What was implemented:**
+- Created `add_animation` tool following the pattern established by `set_transition` for API-limited features
+- Comprehensive input validation for all animation parameters before returning API limitation error
+- Sentinel errors for each validation failure type (animation type, category, direction, trigger, duration, delay)
+- Informative error message explaining the API limitation with link to Google Issue Tracker
+
+**API Limitation Discovery:**
+The Google Slides API does NOT support adding or managing object animations programmatically. This is a known limitation:
+- Issue Tracker: https://issuetracker.google.com/issues/36761236 (feature request open since 2015)
+- The API has no request types for creating, modifying, deleting, or reading animation properties
+- Animations can only be configured through the Google Slides UI (Insert > Animation or View > Motion)
+
+**Files changed:**
+- `internal/tools/add_animation.go` - Tool implementation with:
+  - AddAnimationInput/AddAnimationOutput structs
+  - Validation maps: validAnimationTypes, validAnimationCategories, validAnimationTriggers, validDirections
+  - Sentinel errors: ErrAnimationNotSupported, ErrInvalidAnimationType, ErrInvalidAnimationCategory, ErrInvalidDirection, ErrInvalidAnimationTrigger, ErrInvalidAnimationDuration, ErrInvalidAnimationDelay
+  - Input normalization (uppercase conversion for type/category/direction/trigger)
+  - Duration/delay validation (0-60 seconds)
+  
+- `internal/tools/add_animation_test.go` - 46 test cases across 6 test functions:
+  - TestAddAnimation: 23 subtests for valid animations returning API error and input validation
+  - TestAddAnimation_AllAnimationTypes: 10 animation types tested
+  - TestAddAnimation_AllAnimationCategories: 3 categories tested
+  - TestAddAnimation_AllTriggerTypes: 3 triggers tested
+  - TestAddAnimation_AllDirections: 4 directions tested
+  - TestAddAnimation_ErrorMessageContainsIssueTracker: verifies error message quality
+  
+- `CLAUDE.md` - Added add_animation documentation with API limitation warning, input/output examples, animation types/categories/triggers/directions, sentinel errors, usage pattern
+  
+- `stories.yaml` - Marked US-00053 as passes: true
+
+**Learnings:**
+- Google Slides API has significant gaps for animation-related functionality
+- Following established patterns (like set_transition.go) makes implementation consistent
+- Validation-first approach ensures users get helpful error messages even for unsupported features
+- Case-insensitive input handling (uppercase normalization) provides better UX
+- Using pointers for optional numeric fields (Duration, Delay) allows distinguishing "not set" from "zero"
+
+**Remaining issues:** None - this is an API limitation, not a bug

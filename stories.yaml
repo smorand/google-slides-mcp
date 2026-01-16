@@ -1313,7 +1313,7 @@
   - Duration and delay are applied
   - Trigger options work
   - 'Command: go test ./internal/tools/... -run TestAddAnimation passes'
-  passes: false
+  passes: true
 - id: US-00054
   title: Implement tool to manage animation order
   priority: 15

@@ -4311,6 +4311,85 @@ if errors.Is(err, tools.ErrTransitionNotSupported) {
 }
 ```
 
+### add_animation Tool (`add_animation.go`)
+**API LIMITATION:** This tool returns an error because the Google Slides API does not support adding object animations programmatically.
+
+**Input:**
+```go
+tools.AddAnimationInput{
+    PresentationID:    "presentation-id",  // Required
+    ObjectID:          "object-id",        // Required - ID of object to animate
+    AnimationType:     "FADE_IN",          // Required: APPEAR, FADE_IN, FLY_IN, ZOOM_IN, FADE_OUT, FLY_OUT, ZOOM_OUT, SPIN, FLOAT, BOUNCE
+    AnimationCategory: "entrance",         // Required: entrance, exit, emphasis
+    Direction:         "FROM_LEFT",        // Optional: FROM_LEFT, FROM_RIGHT, FROM_TOP, FROM_BOTTOM (for FLY animations)
+    Duration:          &0.5,               // Optional: duration in seconds (0-60)
+    Delay:             &0.2,               // Optional: delay in seconds (0-60)
+    Trigger:           "ON_CLICK",         // Optional: ON_CLICK, AFTER_PREVIOUS, WITH_PREVIOUS
+}
+```
+
+**Output:**
+```go
+tools.AddAnimationOutput{
+    Success:     bool,    // Always false (API limitation)
+    Message:     string,  // Error explanation
+    AnimationID: string,  // Empty (API limitation)
+}
+```
+
+**Animation Types (validated but not supported by API):**
+- Entrance: `APPEAR`, `FADE_IN`, `FLY_IN`, `ZOOM_IN`
+- Exit: `FADE_OUT`, `FLY_OUT`, `ZOOM_OUT`
+- Emphasis: `SPIN`, `FLOAT`, `BOUNCE`
+
+**Animation Categories:**
+- `entrance` - Animation when object appears
+- `exit` - Animation when object disappears
+- `emphasis` - Animation to draw attention to object
+
+**Direction Options (for FLY_IN/FLY_OUT):**
+- `FROM_LEFT`, `FROM_RIGHT`, `FROM_TOP`, `FROM_BOTTOM`
+
+**Trigger Options:**
+- `ON_CLICK` - Animation triggers on click
+- `AFTER_PREVIOUS` - Animation triggers after previous animation
+- `WITH_PREVIOUS` - Animation triggers with previous animation
+
+**Important API Limitation:**
+The Google Slides API does NOT support adding or managing object animations. This is a known limitation tracked at https://issuetracker.google.com/issues/36761236.
+
+Animations can only be configured through:
+1. Google Slides UI (Insert > Animation or View > Motion)
+2. Google Apps Script (with limitations)
+
+**Sentinel Errors:**
+```go
+tools.ErrAnimationNotSupported    // API does not support animations (always returned for valid input)
+tools.ErrInvalidAnimationType     // Empty or invalid animation type
+tools.ErrInvalidAnimationCategory // Empty or invalid animation category
+tools.ErrInvalidDirection         // Invalid direction value
+tools.ErrInvalidAnimationTrigger  // Invalid trigger value
+tools.ErrInvalidAnimationDuration // Duration negative or exceeds 60 seconds
+tools.ErrInvalidAnimationDelay    // Delay negative or exceeds 60 seconds
+tools.ErrInvalidPresentationID    // Empty presentation ID
+tools.ErrInvalidObjectID          // Empty object ID
+```
+
+**Usage Pattern:**
+```go
+// Attempting to add animation will return informative error
+output, err := tools.AddAnimation(ctx, tokenSource, tools.AddAnimationInput{
+    PresentationID:    "abc123",
+    ObjectID:          "shape-xyz",
+    AnimationType:     "FADE_IN",
+    AnimationCategory: "entrance",
+})
+if errors.Is(err, tools.ErrAnimationNotSupported) {
+    // Expected error - inform user to use Slides UI instead
+    fmt.Println("Animations must be configured via Google Slides UI (Insert > Animation)")
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
