@@ -1116,7 +1116,7 @@
   - Horizontal alignment works
   - Vertical alignment works
   - 'Command: go test ./internal/tools/... -run TestModifyTableCell passes'
-  passes: false
+  passes: true
 - id: US-00046
   title: Implement tool to style table cells
   priority: 11

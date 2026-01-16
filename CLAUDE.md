@@ -2960,6 +2960,160 @@ output, err := tools.MergeCells(ctx, tokenSource, tools.MergeCellsInput{
 fmt.Printf("Action: %s, Range: %s\n", output.Action, output.Range)
 ```
 
+### modify_table_cell Tool (`modify_table_cell.go`)
+Modifies the content and styling of a table cell.
+
+**Input:**
+```go
+tools.ModifyTableCellInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "table-object-id",  // Required - ID of the table
+    Row:            0,                  // Required - 0-based row index
+    Column:         1,                  // Required - 0-based column index
+    Text:           &text,              // Optional - cell text content (pointer to string)
+    Style:          &TableCellStyleInput{...},  // Optional - text styling
+    Alignment:      &TableCellAlignInput{...},  // Optional - cell alignment
+}
+
+// Text styling options:
+tools.TableCellStyleInput{
+    FontFamily:      "Arial",       // Optional - font family name
+    FontSize:        24,            // Optional - font size in points
+    Bold:            &true,         // Optional - bold text
+    Italic:          &true,         // Optional - italic text
+    Underline:       &true,         // Optional - underline text
+    Strikethrough:   &true,         // Optional - strikethrough text
+    ForegroundColor: "#FF0000",     // Optional - text color (hex)
+    BackgroundColor: "#FFFF00",     // Optional - highlight color (hex)
+}
+
+// Alignment options:
+tools.TableCellAlignInput{
+    Horizontal: "CENTER",  // Optional: START, CENTER, END, JUSTIFIED
+    Vertical:   "MIDDLE",  // Optional: TOP, MIDDLE, BOTTOM
+}
+```
+
+**Output:**
+```go
+tools.ModifyTableCellOutput{
+    ObjectID:          "table-object-id",
+    Row:               0,
+    Column:            1,
+    ModifiedProperties: []string{"text", "font_family=Arial", "horizontal_alignment=CENTER"},
+}
+```
+
+**Features:**
+- Set cell text content (replaces existing text)
+- Apply text styling (font, size, bold, italic, color, etc.)
+- Set horizontal alignment (paragraph-level via UpdateParagraphStyleRequest)
+- Set vertical alignment (cell-level via UpdateTableCellPropertiesRequest)
+- Alignment values are case-insensitive (center, CENTER both work)
+- At least one of text, style, or alignment must be provided
+- Invalid colors are silently ignored (other styles still apply)
+
+**Horizontal Alignment Values:**
+| Value | Description |
+|-------|-------------|
+| `START` | Left-aligned (for LTR languages) |
+| `CENTER` | Center-aligned |
+| `END` | Right-aligned (for LTR languages) |
+| `JUSTIFIED` | Justified text |
+
+**Vertical Alignment Values:**
+| Value | Description |
+|-------|-------------|
+| `TOP` | Aligned to top of cell |
+| `MIDDLE` | Vertically centered |
+| `BOTTOM` | Aligned to bottom of cell |
+
+**Sentinel Errors:**
+```go
+tools.ErrModifyTableCellFailed    // Generic modification failure
+tools.ErrInvalidCellIndex         // Row or column index out of range or negative
+tools.ErrNoCellModification       // No text, style, or alignment provided
+tools.ErrInvalidHorizontalAlign   // Invalid horizontal alignment value
+tools.ErrInvalidVerticalAlign     // Invalid vertical alignment value
+tools.ErrNotATable                // Object is not a table
+tools.ErrObjectNotFound           // Table object ID not found in presentation
+tools.ErrInvalidPresentationID    // Empty presentation ID
+tools.ErrPresentationNotFound     // Presentation not found
+tools.ErrAccessDenied             // No permission to modify
+tools.ErrSlidesAPIError           // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Set cell text content
+text := "Hello World"
+output, err := tools.ModifyTableCell(ctx, tokenSource, tools.ModifyTableCellInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Row:            0,
+    Column:         1,
+    Text:           &text,
+})
+
+// Apply text styling
+bold := true
+output, err := tools.ModifyTableCell(ctx, tokenSource, tools.ModifyTableCellInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Row:            1,
+    Column:         0,
+    Style: &tools.TableCellStyleInput{
+        FontFamily:      "Arial",
+        FontSize:        18,
+        Bold:            &bold,
+        ForegroundColor: "#FF0000",
+    },
+})
+
+// Set horizontal alignment
+output, err := tools.ModifyTableCell(ctx, tokenSource, tools.ModifyTableCellInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Row:            0,
+    Column:         0,
+    Alignment: &tools.TableCellAlignInput{
+        Horizontal: "CENTER",
+    },
+})
+
+// Set vertical alignment
+output, err := tools.ModifyTableCell(ctx, tokenSource, tools.ModifyTableCellInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Row:            2,
+    Column:         1,
+    Alignment: &tools.TableCellAlignInput{
+        Vertical: "MIDDLE",
+    },
+})
+
+// Combine text, styling, and alignment
+text := "Styled Text"
+bold := true
+output, err := tools.ModifyTableCell(ctx, tokenSource, tools.ModifyTableCellInput{
+    PresentationID: "abc123",
+    ObjectID:       "table-xyz",
+    Row:            1,
+    Column:         2,
+    Text:           &text,
+    Style: &tools.TableCellStyleInput{
+        Bold:     &bold,
+        FontSize: 24,
+    },
+    Alignment: &tools.TableCellAlignInput{
+        Horizontal: "END",
+        Vertical:   "BOTTOM",
+    },
+})
+
+fmt.Printf("Modified properties: %v\n", output.ModifiedProperties)
+```
+
 ### create_line Tool (`create_line.go`)
 Creates a line or arrow on a slide.
 

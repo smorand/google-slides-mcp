@@ -1492,3 +1492,44 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00045 - Implement tool to modify table cell content
+
+**Status:** Success
+
+**What was implemented:**
+- New `modify_table_cell` MCP tool to modify content and styling of individual table cells
+- ModifyTableCellInput struct with: presentation_id, object_id, row, column (0-based), text, style, alignment
+- ModifyTableCellOutput struct with: object_id, row, column, modified_properties (list of changes)
+- Text modification via DeleteTextRequest + InsertTextRequest (delete all, then insert new text)
+- Text styling via UpdateTextStyleRequest with CellLocation (font_family, font_size, bold, italic, underline, strikethrough, foreground_color, background_color)
+- Horizontal alignment via UpdateParagraphStyleRequest with CellLocation (START, CENTER, END, JUSTIFIED)
+- Vertical alignment via UpdateTableCellPropertiesRequest with TableRange (TOP, MIDDLE, BOTTOM)
+- Alignment values are case-insensitive (normalized to uppercase)
+- Validates that at least one modification (text, style, or alignment) is provided
+- Validates cell indices are within table bounds
+- Reuses `findTableByID` helper from modify_table_structure.go
+- Sentinel errors: ErrModifyTableCellFailed, ErrInvalidCellIndex, ErrNoCellModification, ErrInvalidHorizontalAlign, ErrInvalidVerticalAlign
+- Helper functions: buildModifyTableCellRequests, buildTableCellStyleRequest
+- Comprehensive test suite with 23 test cases
+
+**Files changed:**
+- `internal/tools/modify_table_cell.go` - Tool implementation with input/output types, validation, request builders
+- `internal/tools/modify_table_cell_test.go` - Comprehensive tests (text content, styling, alignment, combined modifications, case-insensitivity, error handling)
+- `CLAUDE.md` - Added modify_table_cell documentation with input/output examples, alignment tables, usage patterns
+- `README.md` - Added modify_table_cell tool documentation with parameters, examples, and errors
+- `stories.yaml` - Marked US-00045 as passes: true
+
+**Learnings:**
+- TableCellLocation uses 0-based RowIndex and ColumnIndex for targeting specific cells
+- Text modification in cells uses same DeleteTextRequest/InsertTextRequest with CellLocation field
+- UpdateTextStyleRequest can target cells via CellLocation field
+- UpdateParagraphStyleRequest can target cells via CellLocation field for horizontal alignment
+- Vertical alignment is different - requires UpdateTableCellPropertiesRequest with TableRange (not CellLocation)
+- ContentAlignment field in TableCellProperties controls vertical alignment (TOP, MIDDLE, BOTTOM)
+- Pattern: separate text, style, and alignment requests into distinct helpers for clarity
+- Reused parseHexColor helper from style_text.go for color parsing
+
+**Remaining issues:** None
+
+---

@@ -3463,6 +3463,177 @@ Unmerge a merged cell at position (1, 2):
 
 ---
 
+#### `modify_table_cell`
+
+Modify the content and styling of a table cell.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "table_xyz123",
+  "row": 0,
+  "column": 1,
+  "text": "Hello World",
+  "style": {
+    "font_family": "Arial",
+    "font_size": 18,
+    "bold": true,
+    "foreground_color": "#FF0000"
+  },
+  "alignment": {
+    "horizontal": "CENTER",
+    "vertical": "MIDDLE"
+  }
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | Yes | Object ID of the table |
+| `row` | integer | Yes | 0-based row index |
+| `column` | integer | Yes | 0-based column index |
+| `text` | string | No | Cell text content (replaces existing) |
+| `style` | object | No | Text styling options |
+| `style.font_family` | string | No | Font family name (e.g., "Arial") |
+| `style.font_size` | integer | No | Font size in points |
+| `style.bold` | boolean | No | Bold text |
+| `style.italic` | boolean | No | Italic text |
+| `style.underline` | boolean | No | Underline text |
+| `style.strikethrough` | boolean | No | Strikethrough text |
+| `style.foreground_color` | string | No | Text color (hex, e.g., "#FF0000") |
+| `style.background_color` | string | No | Highlight color (hex) |
+| `alignment` | object | No | Cell alignment options |
+| `alignment.horizontal` | string | No | Horizontal: `START`, `CENTER`, `END`, `JUSTIFIED` |
+| `alignment.vertical` | string | No | Vertical: `TOP`, `MIDDLE`, `BOTTOM` |
+
+**Note:** At least one of `text`, `style`, or `alignment` must be provided.
+
+**Output:**
+```json
+{
+  "object_id": "table_xyz123",
+  "row": 0,
+  "column": 1,
+  "modified_properties": ["text", "font_family=Arial", "bold=true", "horizontal_alignment=CENTER"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | The table's object ID |
+| `row` | integer | The row index |
+| `column` | integer | The column index |
+| `modified_properties` | array | List of properties that were modified |
+
+**Features:**
+- Set cell text content (replaces existing text)
+- Apply text styling (font, size, bold, italic, color, etc.)
+- Set horizontal alignment (paragraph-level)
+- Set vertical alignment (cell-level)
+- Alignment values are case-insensitive (center, CENTER both work)
+- Invalid colors are silently ignored (other styles still apply)
+
+**Use Cases:**
+- Populating table cells with data
+- Formatting header cells (bold, centered)
+- Applying consistent styling to data cells
+- Creating visually distinct categories with colors
+- Adjusting cell content alignment for readability
+
+**Examples:**
+
+Set cell text content:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "row": 0,
+  "column": 1,
+  "text": "Hello World"
+}
+```
+
+Apply text styling:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "row": 1,
+  "column": 0,
+  "style": {
+    "font_family": "Arial",
+    "font_size": 18,
+    "bold": true,
+    "foreground_color": "#FF0000"
+  }
+}
+```
+
+Set horizontal alignment:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "row": 0,
+  "column": 0,
+  "alignment": {
+    "horizontal": "CENTER"
+  }
+}
+```
+
+Set vertical alignment:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "row": 2,
+  "column": 1,
+  "alignment": {
+    "vertical": "MIDDLE"
+  }
+}
+```
+
+Combine text, styling, and alignment:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "table_xyz",
+  "row": 1,
+  "column": 2,
+  "text": "Styled Text",
+  "style": {
+    "bold": true,
+    "font_size": 24
+  },
+  "alignment": {
+    "horizontal": "END",
+    "vertical": "BOTTOM"
+  }
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid object ID: object_id is required` - Empty object ID
+- `invalid cell index: row must be non-negative` - Negative row index
+- `invalid cell index: column must be non-negative` - Negative column index
+- `no modification specified: text, style, or alignment must be provided` - No modifications
+- `invalid horizontal alignment: must be START, CENTER, END, or JUSTIFIED` - Invalid horizontal alignment
+- `invalid vertical alignment: must be TOP, MIDDLE, or BOTTOM` - Invalid vertical alignment
+- `invalid cell index: row X is out of range (table has Y rows)` - Row out of bounds
+- `invalid cell index: column X is out of range (table has Y columns)` - Column out of bounds
+- `object is not a table` - Object ID doesn't refer to a table
+- `object not found` - Table object ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to modify table cell` - API error during modification
+
+---
+
 #### `create_line`
 
 Create a line or arrow on a slide.
@@ -3999,6 +4170,7 @@ Delete with both (all unique IDs):
 - `create_table` - Insert tables
 - `modify_table_structure` - Add/remove rows and columns from tables
 - `merge_cells` - Merge or unmerge table cells
+- `modify_table_cell` - Modify table cell content and styling
 
 ### Styling and Themes
 - `apply_theme` - Apply presentation themes
