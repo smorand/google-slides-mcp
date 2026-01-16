@@ -2427,3 +2427,105 @@ Implemented the `translate_presentation` MCP tool that translates text in a Goog
 **Test Results:** All 16 retry tests pass (8 test functions with sub-tests)
 
 **Remaining issues:** None
+
+---
+
+## 2026-01-16 - US-00063 - Implement caching layer
+
+**Status:** Success
+
+**What was implemented:**
+- In-memory LRU cache with TTL support, thread-safe with sync.RWMutex
+- Cache hit/miss/eviction metrics tracking
+- Delete by prefix/suffix for group invalidation
+- Background cleanup of expired entries
+
+**Files created:**
+
+- `internal/cache/lru.go` - Core LRU cache implementation (~250 lines):
+  - LRUConfig struct with MaxEntries, DefaultTTL, Logger
+  - LRU struct with map + doubly linked list for O(1) operations
+  - entry struct holding key, value, expiresAt
+  - Metrics struct tracking Hits, Misses, Evictions with HitRate() method
+  - Thread-safe operations using sync.RWMutex
+  - Get(), Set(), SetWithTTL() - basic cache operations
+  - Delete(), DeletePrefix(), DeleteSuffix() - invalidation
+  - Clear(), Size(), Keys(), Cleanup() - management
+  - Automatic eviction when MaxEntries exceeded
+
+- `internal/cache/presentation.go` - Presentation structure cache (~105 lines):
+  - PresentationInfo struct for cached document structure (ID, Title, SlideCount, SlideIDs, ObjectIDs, UpdatedAt)
+  - PresentationCacheConfig with 100 entries, 5-min TTL default
+  - Typed wrapper around LRU cache
+
+- `internal/cache/token.go` - OAuth2 token cache (~125 lines):
+  - CachedToken struct (APIKey, RefreshToken, UserEmail, TokenSource, AccessToken, ExpiresAt, CachedAt)
+  - TokenCacheConfig with 500 entries, 55-min TTL default
+  - InvalidateByEmail() for group invalidation
+
+- `internal/cache/permission.go` - Permission check cache (~150 lines):
+  - PermissionLevel enum (None, Read, Write) with String() method
+  - CachedPermission struct (UserEmail, PresentationID, Level, CachedAt)
+  - PermissionCacheConfig with 1000 entries, 5-min TTL default
+  - permissionKey() generates "user:presentation" composite keys
+  - InvalidateByPresentation(), InvalidateByUser() for group invalidation
+
+- `internal/cache/manager.go` - Unified cache manager (~215 lines):
+  - ManagerConfig holding all three cache configs + CleanupInterval
+  - Manager struct coordinating Presentations, Tokens, Permissions caches
+  - Background cleanup goroutine with configurable interval (default 1 min)
+  - InvalidatePresentation() - invalidates presentation + related permissions
+  - InvalidateUser() - invalidates user's permissions
+  - InvalidateAPIKey() - invalidates cached token
+  - Stats() returns combined statistics
+  - LogStats() logs cache statistics
+  - ResetMetrics() clears all metrics
+
+- `internal/cache/lru_test.go` - LRU cache tests (~460 lines):
+  - 18 test functions covering all functionality
+  - TestLRUExpiration, TestLRUEviction, TestLRUConcurrency
+  - TestLRUDeletePrefix, TestLRUDeleteSuffix
+  - TestLRUMetrics, TestLRUCleanup
+
+- `internal/cache/presentation_test.go` - Presentation cache tests (~210 lines):
+  - 9 test functions covering typed wrapper operations
+  - Expiration, invalidation, metrics, cleanup tests
+
+- `internal/cache/token_test.go` - Token cache tests (~250 lines):
+  - 12 test functions including TokenSource caching
+  - InvalidateByEmail group invalidation test
+  - OAuth2 integration test
+
+- `internal/cache/permission_test.go` - Permission cache tests (~280 lines):
+  - 14 test functions covering permission levels
+  - InvalidateByPresentation, InvalidateByUser tests
+  - PermissionLevel.String() and permissionKey() tests
+
+- `internal/cache/manager_test.go` - Manager tests (~270 lines):
+  - 12 test functions for coordinated cache management
+  - Background cleanup goroutine test
+  - Stop() graceful shutdown test
+  - Coordinated invalidation tests
+
+**Files modified:**
+- `CLAUDE.md` - Added Cache Package documentation with configuration, usage patterns, TTL rationale, invalidation strategy, metrics
+- `stories.yaml` - Marked US-00063 as passes: true
+
+**Default TTL Values:**
+| Cache Type | Default TTL | Max Entries | Rationale |
+|------------|-------------|-------------|-----------|
+| Presentations | 5 minutes | 100 | Balance freshness with API quota savings |
+| Tokens | 55 minutes | 500 | Just before 60-minute OAuth token expiry |
+| Permissions | 5 minutes | 1000 | Balance security with API quota savings |
+
+**Learnings:**
+- Using container/list for doubly linked list provides O(1) move-to-front
+- Composite keys (user:presentation) enable efficient group invalidation
+- TTL check on Get() rather than background cleanup reduces CPU usage
+- DeletePrefix/DeleteSuffix require iterating keys but avoid maintaining secondary indexes
+- Background cleanup should be stoppable via channel for graceful shutdown
+- Jitter in tests can be avoided by using very short TTLs (50ms) with longer waits (100ms)
+
+**Test Results:** All 68 tests pass across 5 test files
+
+**Remaining issues:** None

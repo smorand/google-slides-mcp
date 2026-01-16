@@ -431,6 +431,121 @@ func (t *Tools) ModifySlide(ctx context.Context, input ModifySlideInput) (*Modif
 }
 ```
 
+## Cache Package
+
+The `internal/cache/` package provides in-memory LRU caching with TTL support for improved performance:
+
+### Core LRU Cache (`lru.go`)
+- Thread-safe LRU cache with TTL support
+- Configurable max entries with automatic eviction
+- Cache hit/miss metrics tracking
+- Delete by prefix/suffix for group invalidation
+- Background cleanup of expired entries
+
+### Configuration
+```go
+cache.LRUConfig{
+    MaxEntries: 100,               // Maximum entries (0 = unlimited)
+    DefaultTTL: 5 * time.Minute,   // Default TTL for entries
+    Logger:     slog.Default(),    // Logger for cache events
+}
+```
+
+### Typed Cache Wrappers
+
+**Presentation Cache** (`presentation.go`) - Document structure caching:
+```go
+cache.PresentationCacheConfig{
+    MaxEntries: 100,              // Default: 100 presentations
+    TTL:        5 * time.Minute,  // Default: 5 minutes
+}
+
+// Usage
+presCache := cache.NewPresentationCache(config)
+presCache.Set(&cache.PresentationInfo{ID: "pres123", Title: "My Presentation"})
+info, ok := presCache.Get("pres123")
+presCache.Invalidate("pres123")
+```
+
+**Token Cache** (`token.go`) - OAuth2 token caching:
+```go
+cache.TokenCacheConfig{
+    MaxEntries: 500,               // Default: 500 tokens
+    TTL:        55 * time.Minute,  // Default: 55 minutes (before 60-min expiry)
+}
+
+// Usage
+tokenCache := cache.NewTokenCache(config)
+tokenCache.Set(&cache.CachedToken{APIKey: "key", TokenSource: ts})
+token, ok := tokenCache.Get("api-key")
+tokenCache.InvalidateByEmail("user@example.com")  // Invalidate all tokens for user
+```
+
+**Permission Cache** (`permission.go`) - Permission check caching:
+```go
+cache.PermissionCacheConfig{
+    MaxEntries: 1000,              // Default: 1000 permissions
+    TTL:        5 * time.Minute,   // Default: 5 minutes
+}
+
+// Usage
+permCache := cache.NewPermissionCache(config)
+permCache.Set(&cache.CachedPermission{UserEmail: "user@example.com", PresentationID: "pres123", Level: cache.PermissionWrite})
+perm, ok := permCache.Get("user@example.com", "pres123")
+permCache.InvalidateByPresentation("pres123")  // Invalidate all permissions for presentation
+permCache.InvalidateByUser("user@example.com") // Invalidate all permissions for user
+```
+
+### Cache Manager (`manager.go`)
+Unified manager coordinating all caches with automatic cleanup:
+
+```go
+config := cache.DefaultManagerConfig()  // Production defaults
+manager := cache.NewManager(config)
+defer manager.Stop()  // Stop background cleanup
+
+// Access individual caches
+manager.Presentations.Set(...)
+manager.Tokens.Set(...)
+manager.Permissions.Set(...)
+
+// Coordinated invalidation on write operations
+manager.InvalidatePresentation("pres123")  // Invalidates presentation + related permissions
+manager.InvalidateUser("user@example.com") // Invalidates user's permissions
+manager.InvalidateAPIKey("api-key")        // Invalidates cached token
+
+// Clear all caches
+manager.Clear()
+
+// Get statistics
+stats := manager.Stats()
+fmt.Printf("Hit rate: %.2f%%\n", stats.Presentations.Metrics.HitRate())
+
+// Log statistics
+manager.LogStats()
+```
+
+### Default TTL Values
+| Cache Type | Default TTL | Rationale |
+|------------|-------------|-----------|
+| Presentations | 5 minutes | Balance freshness with API quota savings |
+| Tokens | 55 minutes | Just before 60-minute OAuth token expiry |
+| Permissions | 5 minutes | Balance security with API quota savings |
+
+### Cache Invalidation Strategy
+- **On write operations**: Call `manager.InvalidatePresentation(id)` after modifying a presentation
+- **On user auth changes**: Call `manager.InvalidateUser(email)` when user's authentication changes
+- **On API key revocation**: Call `manager.InvalidateAPIKey(key)` when an API key is revoked
+
+### Metrics
+```go
+metrics := cache.Metrics()
+metrics.Hits       // Cache hits count
+metrics.Misses     // Cache misses count
+metrics.Evictions  // LRU evictions count
+metrics.HitRate()  // Hit rate percentage (0-100)
+```
+
 ## Rate Limiting Package
 
 The `internal/ratelimit/` package provides global rate limiting with per-endpoint support:
