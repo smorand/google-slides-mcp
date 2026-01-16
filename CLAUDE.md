@@ -2992,6 +2992,84 @@ output, err := tools.ChangeZOrder(ctx, tokenSource, tools.ChangeZOrderInput{
 fmt.Printf("Object is now at layer %d of %d\n", output.NewZOrder, output.TotalLayers)
 ```
 
+### group_objects Tool (`group_objects.go`)
+Groups or ungroups objects on a slide.
+
+**Input:**
+```go
+tools.GroupObjectsInput{
+    PresentationID: "presentation-id",  // Required
+    Action:         "group",            // Required: "group" or "ungroup"
+    ObjectIDs:      []string{"id1", "id2"},  // For "group": array of object IDs (min 2)
+    ObjectID:       "group-id",         // For "ungroup": ID of group to ungroup
+}
+```
+
+**Output:**
+```go
+tools.GroupObjectsOutput{
+    Action:    "group",               // The action performed
+    GroupID:   "group_1234567890",    // For "group": the created group's object ID
+    ObjectIDs: []string{"id1", "id2"}, // For "ungroup": the ungrouped object IDs
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `group` | Groups multiple objects together into a single group |
+| `ungroup` | Separates a group into individual objects |
+
+**Features:**
+- Action names are case-insensitive (group, GROUP both work)
+- Requires at least 2 objects for grouping
+- All objects must be on the same slide
+- Returns created group ID for group action, child IDs for ungroup action
+- Validates that objects can be grouped (tables, videos, placeholders cannot be grouped)
+- Validates that objects are not already inside a group
+- Uses `GroupObjectsRequest` and `UngroupObjectsRequest` in Slides API BatchUpdate
+
+**Objects That Cannot Be Grouped:**
+- Tables
+- Videos
+- Placeholder shapes (title, body, etc.)
+- Objects already inside another group
+
+**Sentinel Errors:**
+```go
+tools.ErrGroupObjectsFailed      // Generic group failure
+tools.ErrUngroupObjectsFailed    // Generic ungroup failure
+tools.ErrInvalidGroupAction      // Invalid action (not "group" or "ungroup")
+tools.ErrNotEnoughObjects        // Less than 2 objects for grouping
+tools.ErrObjectsOnDifferentPages // Objects are on different slides
+tools.ErrNotAGroup               // Object is not a group (for ungroup)
+tools.ErrCannotGroupObject       // Object type cannot be grouped (table, video, placeholder)
+tools.ErrObjectNotFound          // Object not found in presentation
+tools.ErrInvalidPresentationID   // Empty presentation ID
+tools.ErrPresentationNotFound    // Presentation not found
+tools.ErrAccessDenied            // No permission to modify
+tools.ErrSlidesAPIError          // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Group multiple objects together
+output, err := tools.GroupObjects(ctx, tokenSource, tools.GroupObjectsInput{
+    PresentationID: "abc123",
+    Action:         "group",
+    ObjectIDs:      []string{"shape-1", "shape-2", "shape-3"},
+})
+fmt.Printf("Created group: %s\n", output.GroupID)
+
+// Ungroup a group into individual objects
+output, err := tools.GroupObjects(ctx, tokenSource, tools.GroupObjectsInput{
+    PresentationID: "abc123",
+    Action:         "ungroup",
+    ObjectID:       "group_1234567890",
+})
+fmt.Printf("Ungrouped objects: %v\n", output.ObjectIDs)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 

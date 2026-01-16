@@ -991,7 +991,7 @@
   - Returns correct IDs
   - Grouped objects move together
   - 'Command: go test ./internal/tools/... -run TestGroupObjects passes'
-  passes: false
+  passes: true
 - id: US-00041
   title: Implement tool to delete object
   priority: 10

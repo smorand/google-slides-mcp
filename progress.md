@@ -1315,3 +1315,38 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00040 - Implement tool to group/ungroup objects
+
+**Status:** Success
+
+**What was implemented:**
+- New `group_objects` MCP tool to group and ungroup objects on slides
+- Two actions: "group" (combine objects) and "ungroup" (split a group)
+- Uses Google Slides `GroupObjectsRequest` and `UngroupObjectsRequest` in BatchUpdate API
+- Validates objects can be grouped (tables, videos, placeholders cannot be grouped)
+- Validates all objects are on the same slide before grouping
+- Checks that objects are not already inside a group
+- Generates unique group object IDs using timestamp
+- Returns created group ID for group action, or array of child IDs for ungroup action
+- Helper function `containsObjectID` for recursive group membership checking
+- Reuses existing `findElementAndCheckGroup` helper from change_z_order.go
+- Comprehensive test suite with 23 test cases covering all scenarios
+
+**Files changed:**
+- `internal/tools/group_objects.go` - Tool implementation with GroupObjectsInput, GroupObjectsOutput types, groupObjects and ungroupObjects helpers
+- `internal/tools/group_objects_test.go` - Comprehensive tests (group success, ungroup success, action normalization, validation errors, API errors)
+- `CLAUDE.md` - Added group_objects documentation with actions table, ungroupable objects list, sentinel errors, usage patterns
+- `README.md` - Added group_objects tool documentation with input/output examples and errors
+
+**Learnings:**
+- Google Slides API uses `GroupObjectsRequest` with `ChildrenObjectIds` (array) and `GroupObjectId` (suggested ID)
+- API uses `UngroupObjectsRequest` with `ObjectIds` (array of group IDs to ungroup)
+- Response includes actual created group ID in `resp.Replies[0].GroupObjects.ObjectId`
+- Cannot group: tables, videos, placeholder shapes, objects already in groups
+- All objects to group must be on same page - find slide containing all objects first
+- Pattern: use sentinel errors for different validation failures (ErrNotEnoughObjects, ErrObjectsOnDifferentPages, etc.)
+
+**Remaining issues:** None
+
+---

@@ -3447,6 +3447,99 @@ Move backward one layer:
 - `failed to change z-order` - API error
 
 ---
+
+#### `group_objects`
+
+Group or ungroup objects on a slide.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "action": "group",
+  "object_ids": ["shape-1", "shape-2", "shape-3"]
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `action` | string | Yes | Action to perform: `group` or `ungroup` |
+| `object_ids` | array | For group | Array of object IDs to group (minimum 2) |
+| `object_id` | string | For ungroup | ID of the group to ungroup |
+
+**Actions:**
+
+| Action | Description |
+|--------|-------------|
+| `group` | Groups multiple objects together into a single group |
+| `ungroup` | Separates a group into individual objects |
+
+**Output (group action):**
+```json
+{
+  "action": "group",
+  "group_id": "group_1234567890"
+}
+```
+
+**Output (ungroup action):**
+```json
+{
+  "action": "ungroup",
+  "object_ids": ["shape-1", "shape-2", "shape-3"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `action` | string | The action performed |
+| `group_id` | string | Created group's object ID (for group action) |
+| `object_ids` | array | IDs of ungrouped objects (for ungroup action) |
+
+**Features:**
+- Action names are case-insensitive
+- Requires at least 2 objects for grouping
+- All objects must be on the same slide
+- Validates that objects can be grouped
+
+**Objects That Cannot Be Grouped:**
+- Tables
+- Videos
+- Placeholder shapes (title, body, etc.)
+- Objects already inside another group
+
+**Examples:**
+
+Group objects:
+```json
+{
+  "presentation_id": "abc123",
+  "action": "group",
+  "object_ids": ["shape-1", "shape-2"]
+}
+```
+
+Ungroup a group:
+```json
+{
+  "presentation_id": "abc123",
+  "action": "ungroup",
+  "object_id": "group_1234567890"
+}
+```
+
+**Errors:**
+- `invalid group action` - Action must be 'group' or 'ungroup'
+- `at least two objects are required to group` - Need minimum 2 objects
+- `all objects must be on the same page` - Objects on different slides
+- `object is not a group` - Trying to ungroup a non-group object
+- `object cannot be grouped` - Object type not supported (table, video, placeholder)
+- `object not found` - Object ID not found
+- `access denied` - No permission to modify
+- `failed to group/ungroup objects` - API error
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 
