@@ -1350,3 +1350,39 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00041 - Implement tool to delete object
+
+**Status:** Success
+
+**What was implemented:**
+- New `delete_object` MCP tool to delete one or more objects from a presentation
+- Supports single object deletion via `object_id` field
+- Supports batch deletion via `multiple` array field
+- Both fields can be combined (all unique IDs are deleted)
+- Automatically deduplicates object IDs in input
+- Validates objects exist before attempting deletion using `categorizeObjectIDs` helper
+- Partial success handling: deletes found objects, reports not found IDs separately
+- Recursively finds objects anywhere (slides, masters, layouts, nested in groups)
+- Uses Google Slides `DeleteObjectRequest` in BatchUpdate API
+- Returns `DeleteObjectOutput` with deleted count, deleted IDs, and optional not found IDs
+- Comprehensive test suite with 19 test cases covering all scenarios
+
+**Files changed:**
+- `internal/tools/delete_object.go` - Tool implementation with DeleteObjectInput, DeleteObjectOutput types, collectObjectIDsToDelete, categorizeObjectIDs, collectAllObjectIDs, collectPageElementIDs helpers
+- `internal/tools/delete_object_test.go` - Comprehensive tests (single object, multiple objects, deduplication, nested groups, partial not found, all not found, missing inputs, access denied, batch update failures)
+- `CLAUDE.md` - Added delete_object documentation with features, sentinel errors, usage patterns
+- `README.md` - Added delete_object tool documentation with input/output examples and errors
+
+**Learnings:**
+- Google Slides API uses `DeleteObjectRequest` with `ObjectId` field for each object
+- BatchUpdate can contain multiple DeleteObjectRequest entries for batch deletion
+- Need to pre-validate object existence by scanning entire presentation (slides, masters, layouts)
+- Grouped objects have nested PageElements in `ElementGroup.Children` - must recursively scan
+- Pattern: separate object collection from validation - first collect all IDs to delete, then categorize into existing/not found
+- Partial success is valid UX: delete what exists, report what doesn't exist
+- Tables contain TableRows with TableCells, but cells don't have separate object IDs (identified by row/column)
+
+**Remaining issues:** None
+
+---

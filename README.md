@@ -3540,6 +3540,84 @@ Ungroup a group:
 - `failed to group/ungroup objects` - API error
 
 ---
+
+#### `delete_object`
+
+Delete one or more objects from a presentation.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "object_id": "shape-xyz"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `object_id` | string | No* | Single object ID to delete |
+| `multiple` | array | No* | Array of object IDs for batch delete |
+
+*At least one of `object_id` or `multiple` is required. Both can be provided together.
+
+**Output:**
+```json
+{
+  "deleted_count": 3,
+  "deleted_ids": ["shape-1", "shape-2", "shape-3"],
+  "not_found_ids": ["shape-4"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deleted_count` | number | Number of objects deleted |
+| `deleted_ids` | array | List of deleted object IDs |
+| `not_found_ids` | array | Object IDs that were not found (optional) |
+
+**Features:**
+- Delete single object or multiple objects in batch
+- Both `object_id` and `multiple` can be combined
+- Automatically deduplicates object IDs
+- Partial success: deletes found objects, reports not found separately
+- Finds objects anywhere (slides, masters, layouts, nested in groups)
+
+**Examples:**
+
+Delete single object:
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-xyz"
+}
+```
+
+Delete multiple objects:
+```json
+{
+  "presentation_id": "abc123",
+  "multiple": ["shape-1", "shape-2", "image-1"]
+}
+```
+
+Delete with both (all unique IDs):
+```json
+{
+  "presentation_id": "abc123",
+  "object_id": "shape-1",
+  "multiple": ["shape-2", "shape-3"]
+}
+```
+
+**Errors:**
+- `no objects specified for deletion` - Neither object_id nor multiple provided
+- `none of the specified objects were found` - All objects not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to modify
+- `failed to delete object` - API error
+
+---
 - `add_video` - Embed videos
 - `create_table` - Insert tables
 

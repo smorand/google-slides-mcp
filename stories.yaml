@@ -1012,7 +1012,7 @@
   - Deleted objects are removed from slide
   - Returns accurate count
   - 'Command: go test ./internal/tools/... -run TestDeleteObject passes'
-  passes: false
+  passes: true
 - id: US-00042
   title: Implement tool to create table
   priority: 11

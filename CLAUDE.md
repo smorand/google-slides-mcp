@@ -3070,6 +3070,76 @@ output, err := tools.GroupObjects(ctx, tokenSource, tools.GroupObjectsInput{
 fmt.Printf("Ungrouped objects: %v\n", output.ObjectIDs)
 ```
 
+### delete_object Tool (`delete_object.go`)
+Deletes one or more objects from a presentation.
+
+**Input:**
+```go
+tools.DeleteObjectInput{
+    PresentationID: "presentation-id",  // Required
+    ObjectID:       "object-id",        // Single object ID (use this OR Multiple)
+    Multiple:       []string{"id1", "id2"},  // Array of object IDs for batch delete
+}
+```
+
+**Output:**
+```go
+tools.DeleteObjectOutput{
+    DeletedCount: 3,                        // Number of objects deleted
+    DeletedIDs:   []string{"id1", "id2", "id3"},  // List of deleted object IDs
+    NotFoundIDs:  []string{"id4"},          // Object IDs that were not found (if any)
+}
+```
+
+**Features:**
+- Delete single object via `object_id` or multiple via `multiple` array
+- Both `object_id` and `multiple` can be provided together (all unique IDs are deleted)
+- Automatically deduplicates object IDs
+- Partial success: deletes found objects, reports not found IDs separately
+- Validates objects exist before attempting deletion
+- Finds objects anywhere in presentation (slides, masters, layouts, groups)
+- Uses `DeleteObjectRequest` in Slides API BatchUpdate
+
+**Sentinel Errors:**
+```go
+tools.ErrDeleteObjectFailed    // Generic deletion failure
+tools.ErrNoObjectsToDelete     // Neither object_id nor multiple provided
+tools.ErrObjectNotFound        // None of the specified objects were found
+tools.ErrInvalidPresentationID // Empty presentation ID
+tools.ErrPresentationNotFound  // Presentation not found
+tools.ErrAccessDenied          // No permission to modify
+tools.ErrSlidesAPIError        // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Delete single object
+output, err := tools.DeleteObject(ctx, tokenSource, tools.DeleteObjectInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-xyz",
+})
+fmt.Printf("Deleted %d object(s)\n", output.DeletedCount)
+
+// Delete multiple objects
+output, err := tools.DeleteObject(ctx, tokenSource, tools.DeleteObjectInput{
+    PresentationID: "abc123",
+    Multiple:       []string{"shape-1", "shape-2", "image-1"},
+})
+fmt.Printf("Deleted: %v\n", output.DeletedIDs)
+
+// Delete with both single and multiple (all unique IDs deleted)
+output, err := tools.DeleteObject(ctx, tokenSource, tools.DeleteObjectInput{
+    PresentationID: "abc123",
+    ObjectID:       "shape-1",
+    Multiple:       []string{"shape-2", "shape-3"},
+})
+
+// Handle partial success (some objects not found)
+if len(output.NotFoundIDs) > 0 {
+    fmt.Printf("Warning: %d objects not found: %v\n", len(output.NotFoundIDs), output.NotFoundIDs)
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
