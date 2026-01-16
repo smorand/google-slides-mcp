@@ -6,7 +6,9 @@ import (
 	"io"
 	"log/slog"
 
+	"cloud.google.com/go/translate"
 	"golang.org/x/oauth2"
+	"golang.org/x/text/language"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
@@ -233,6 +235,74 @@ func NewRealDriveServiceFactory() DriveServiceFactory {
 	}
 }
 
+// realTranslateService wraps the actual Google Cloud Translation API.
+type realTranslateService struct {
+	client *translate.Client
+}
+
+// TranslateText translates a single text string.
+func (s *realTranslateService) TranslateText(ctx context.Context, text, targetLanguage, sourceLanguage string) (string, error) {
+	results, err := s.TranslateTexts(ctx, []string{text}, targetLanguage, sourceLanguage)
+	if err != nil {
+		return "", err
+	}
+	if len(results) == 0 {
+		return "", nil
+	}
+	return results[0], nil
+}
+
+// TranslateTexts translates multiple text strings in a batch.
+func (s *realTranslateService) TranslateTexts(ctx context.Context, texts []string, targetLanguage, sourceLanguage string) ([]string, error) {
+	if len(texts) == 0 {
+		return []string{}, nil
+	}
+
+	targetLang, err := language.Parse(targetLanguage)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &translate.Options{
+		Format: translate.Text,
+	}
+
+	if sourceLanguage != "" {
+		sourceLang, err := language.Parse(sourceLanguage)
+		if err != nil {
+			return nil, err
+		}
+		opts.Source = sourceLang
+	}
+
+	translations, err := s.client.Translate(ctx, texts, targetLang, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]string, len(translations))
+	for i, t := range translations {
+		results[i] = t.Text
+	}
+	return results, nil
+}
+
+// Close closes the translate client.
+func (s *realTranslateService) Close() error {
+	return s.client.Close()
+}
+
+// NewRealTranslateServiceFactory returns a factory that creates real Translate services.
+func NewRealTranslateServiceFactory() TranslateServiceFactory {
+	return func(ctx context.Context, tokenSource oauth2.TokenSource) (TranslateService, error) {
+		client, err := translate.NewClient(ctx, option.WithTokenSource(tokenSource))
+		if err != nil {
+			return nil, err
+		}
+		return &realTranslateService{client: client}, nil
+	}
+}
+
 // ToolsConfig holds configuration for the tools.
 type ToolsConfig struct {
 	Logger *slog.Logger
@@ -247,9 +317,10 @@ func DefaultToolsConfig() ToolsConfig {
 
 // Tools provides MCP tool implementations.
 type Tools struct {
-	config               ToolsConfig
-	slidesServiceFactory SlidesServiceFactory
-	driveServiceFactory  DriveServiceFactory
+	config                  ToolsConfig
+	slidesServiceFactory    SlidesServiceFactory
+	driveServiceFactory     DriveServiceFactory
+	translateServiceFactory TranslateServiceFactory
 }
 
 // NewTools creates a new Tools instance.
@@ -259,7 +330,13 @@ func NewTools(config ToolsConfig, slidesFactory SlidesServiceFactory) *Tools {
 }
 
 // NewToolsWithDrive creates a new Tools instance with Drive service support.
+// Deprecated: Use NewToolsWithAllServices instead for full functionality including translation.
 func NewToolsWithDrive(config ToolsConfig, slidesFactory SlidesServiceFactory, driveFactory DriveServiceFactory) *Tools {
+	return NewToolsWithAllServices(config, slidesFactory, driveFactory, nil)
+}
+
+// NewToolsWithAllServices creates a new Tools instance with all service support.
+func NewToolsWithAllServices(config ToolsConfig, slidesFactory SlidesServiceFactory, driveFactory DriveServiceFactory, translateFactory TranslateServiceFactory) *Tools {
 	if config.Logger == nil {
 		config.Logger = slog.Default()
 	}
@@ -269,10 +346,14 @@ func NewToolsWithDrive(config ToolsConfig, slidesFactory SlidesServiceFactory, d
 	if driveFactory == nil {
 		driveFactory = NewRealDriveServiceFactory()
 	}
+	if translateFactory == nil {
+		translateFactory = NewRealTranslateServiceFactory()
+	}
 
 	return &Tools{
-		config:               config,
-		slidesServiceFactory: slidesFactory,
-		driveServiceFactory:  driveFactory,
+		config:                  config,
+		slidesServiceFactory:    slidesFactory,
+		driveServiceFactory:     driveFactory,
+		translateServiceFactory: translateFactory,
 	}
 }

@@ -1465,7 +1465,7 @@
   - Formatting is preserved after translation
   - Scope options work correctly
   - 'Command: go test ./internal/tools/... -run TestTranslatePresentation passes'
-  passes: false
+  passes: true
 - id: US-00060
   title: Implement tool to manage hyperlinks
   priority: 19

@@ -4979,6 +4979,82 @@ Reply to, resolve, unresolve, or delete a comment in a presentation.
 - `add_comment` - Add a comment to a presentation with optional object/slide anchoring
 - `manage_comment` - Reply to, resolve, unresolve, or delete a comment
 
+### Translation
+- `translate_presentation` - Translate text in a presentation using Google Cloud Translation API
+
+---
+
+#### `translate_presentation`
+
+Translates text in a presentation using Google Cloud Translation API.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "target_language": "fr",
+  "source_language": "en",
+  "scope": "all"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `target_language` | string | Yes | ISO 639-1 language code (e.g., `fr`, `es`, `de`, `ja`) |
+| `source_language` | string | No | Source language code (auto-detected if omitted) |
+| `scope` | string | No | Scope of translation: `all` (default), `slide`, or `object` |
+| `slide_index` | integer | For scope=slide | 1-based slide index |
+| `slide_id` | string | For scope=slide | Alternative to slide_index |
+| `object_id` | string | For scope=object | Object ID to translate |
+
+**Output:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "target_language": "fr",
+  "source_language": "auto-detected",
+  "translated_count": 15,
+  "affected_slides": [1, 2, 3],
+  "translated_elements": [
+    {
+      "slide_index": 1,
+      "object_id": "shape_123",
+      "object_type": "TEXT_BOX",
+      "original_text": "Hello World",
+      "translated_text": "Bonjour le monde"
+    }
+  ]
+}
+```
+
+**Scope Options:**
+| Scope | Description |
+|-------|-------------|
+| `all` | Translate all text in the entire presentation (default) |
+| `slide` | Translate text only on a specific slide (requires `slide_index` or `slide_id`) |
+| `object` | Translate text only in a specific object (requires `object_id`) |
+
+**Features:**
+- Uses Google Cloud Translation API for high-quality translations
+- Batch translates all text elements for efficiency
+- Supports auto-detection of source language
+- Translates text in shapes, text boxes, and speaker notes
+- Preserves formatting while replacing text content
+- Returns detailed list of translated elements with before/after text
+
+**Errors:**
+- `target_language is required` - No target language specified
+- `invalid scope` - Scope must be 'all', 'slide', or 'object'
+- `slide_index or slide_id is required when scope is 'slide'` - Missing slide reference
+- `object_id is required when scope is 'object'` - Missing object ID
+- `no translatable text found` - No text found in the specified scope
+- `translation API error` - Google Cloud Translation API error
+- `presentation not found` - Presentation doesn't exist
+- `access denied` - No permission to modify the presentation
+
+---
+
 ## Configuration
 
 Environment variables:

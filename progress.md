@@ -2182,3 +2182,87 @@ Implemented the `manage_comment` MCP tool that provides four actions for managin
 **Test Results:** All 23 tests pass
 
 **Remaining issues:** None
+
+---
+
+## US-00059: Implement tool to translate presentation
+
+**Status:** Completed
+**Date:** 2026-01-16
+
+**Implementation Summary:**
+
+Implemented the `translate_presentation` MCP tool that translates text in a Google Slides presentation using Google Cloud Translation API. Supports translating all text, a specific slide, or a specific object.
+
+**Files Modified:**
+
+- `internal/tools/translate_presentation.go` - New file with tool implementation:
+  - `TranslateService` interface abstracting Google Cloud Translation API
+  - `TranslateServiceFactory` type for creating translate services from token source
+  - `TranslatePresentationInput` struct with presentation_id, target_language, source_language, scope, slide_index, slide_id, object_id
+  - `TranslatePresentationOutput` struct with translated_count, affected_slides, translated_elements
+  - `TranslatedElement` struct capturing original and translated text for each element
+  - `TranslatePresentation` method as main entry point
+  - `collectTextElements` and `collectTextFromElements` helpers for scope-based text extraction
+  - Sentinel errors: ErrTranslateFailed, ErrInvalidTargetLanguage, ErrTranslateAPIError, ErrNoTextToTranslate
+
+- `internal/tools/translate_presentation_test.go` - New file with 24 test cases covering:
+  - Successful translation of entire presentation (scope: all)
+  - Scope slide by index filters correctly
+  - Scope slide by ID filters correctly
+  - Scope object filters to specific object
+  - Speaker notes are translated
+  - Text in groups is translated recursively
+  - Empty/whitespace-only text elements are skipped
+  - Unchanged translations (same input/output) are skipped
+  - Error cases: missing presentation_id, missing target_language, invalid scope
+  - Scope slide without slide_index/slide_id error
+  - Scope object without object_id error
+  - Slide not found error
+  - Object not found error
+  - Presentation not found (404)
+  - Access denied (403)
+  - Translation API failure
+  - Slides service factory failure
+  - Translate service factory failure
+
+- `internal/tools/tools.go` - Extended with Translation API support:
+  - Added imports for `cloud.google.com/go/translate` and `golang.org/x/text/language`
+  - Added `translateServiceFactory TranslateServiceFactory` field to Tools struct
+  - `realTranslateService` struct wrapping Google Cloud Translation client
+  - `TranslateText` method for single text translation
+  - `TranslateTexts` method for batch translation (more efficient)
+  - `NewRealTranslateServiceFactory` function
+  - `NewToolsWithAllServices` constructor accepting all three service factories
+  - Deprecated `NewToolsWithDrive` (delegates to NewToolsWithAllServices)
+
+- `CLAUDE.md` - Added comprehensive translate_presentation tool documentation:
+  - Input/Output struct definitions with JSON examples
+  - Scope options table (all, slide, object)
+  - Features list (batch translation, auto-detection, speaker notes support)
+  - Sentinel errors documentation
+  - Usage patterns with code examples
+  - TranslateService interface documentation
+
+- `README.md` - Added translate_presentation tool documentation:
+  - New Translation section in tool summary
+  - Detailed tool documentation with JSON examples
+  - Parameter table with descriptions
+  - Scope options table
+  - Features and error descriptions
+
+- `stories.yaml` - Marked US-00059 as passes: true
+
+**Learnings:**
+- Google Cloud Translation API uses `golang.org/x/text/language` for language tag parsing
+- Batch translation is more efficient - collect all texts, translate in one API call, then apply updates
+- TranslateTexts returns translations in same order as input texts
+- Speaker notes are in slide.SlideProperties.NotesPage.PageElements, look for BODY placeholder
+- Text in grouped elements requires recursive collection
+- Empty/whitespace text elements should be filtered out before translation
+- Unchanged translations (same as original) should be skipped to avoid unnecessary API calls
+- Use DeleteText with Type: "ALL" followed by InsertText to replace text content
+
+**Test Results:** All 24 tests pass
+
+**Remaining issues:** None

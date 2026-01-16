@@ -4824,6 +4824,131 @@ output, err := tools.ManageComment(ctx, tokenSource, tools.ManageCommentInput{
 fmt.Printf("Action: %s, Success: %v, Message: %s\n", output.Action, output.Success, output.Message)
 ```
 
+### translate_presentation Tool (`translate_presentation.go`)
+Translates all text in a presentation using Google Cloud Translation API.
+
+**Input:**
+```go
+tools.TranslatePresentationInput{
+    PresentationID: "presentation-id",  // Required
+    TargetLanguage: "fr",               // Required - ISO 639-1 code (e.g., "fr", "es", "de", "ja")
+    SourceLanguage: "en",               // Optional - auto-detect if omitted
+    Scope:          "all",              // Optional: "all" | "slide" | "object" - Default: "all"
+    SlideIndex:     1,                  // 1-based, for scope="slide"
+    SlideID:        "slide-id",         // Alternative to SlideIndex for scope="slide"
+    ObjectID:       "object-id",        // For scope="object"
+}
+```
+
+**Output:**
+```go
+tools.TranslatePresentationOutput{
+    PresentationID:     "presentation-id",
+    TargetLanguage:     "fr",
+    SourceLanguage:     "en",            // Detected or specified ("auto-detected" if not specified)
+    TranslatedCount:    10,              // Number of text elements translated
+    AffectedSlides:     []int{1, 2, 3},  // 1-based slide indices
+    TranslatedElements: []TranslatedElement{...},
+}
+
+// Each translated element contains:
+tools.TranslatedElement{
+    SlideIndex:     1,                   // 1-based slide index
+    ObjectID:       "shape-123",
+    ObjectType:     "TEXT_BOX",          // Shape type
+    OriginalText:   "Hello World",
+    TranslatedText: "Bonjour le monde",
+}
+```
+
+**Scope Options:**
+| Scope | Description |
+|-------|-------------|
+| `all` | Translate all text in entire presentation (default) |
+| `slide` | Translate only text on specified slide (requires `slide_index` or `slide_id`) |
+| `object` | Translate only text in specified object (requires `object_id`) |
+
+**Features:**
+- Uses Google Cloud Translation API for translation
+- Supports batch translation for efficiency
+- Preserves text formatting (font, size, color, etc.)
+- Auto-detects source language if not specified
+- Skips whitespace-only text and unchanged translations
+- Supports nested text in groups
+- Also translates speaker notes text
+- Uses ISO 639-1 language codes (e.g., "fr", "es", "de", "ja", "zh", "ko")
+
+**Sentinel Errors:**
+```go
+tools.ErrTranslateFailed         // Generic translation failure
+tools.ErrInvalidTargetLanguage   // Target language is required
+tools.ErrTranslateAPIError       // Translation API errors
+tools.ErrNoTextToTranslate       // No translatable text found in specified scope
+tools.ErrInvalidScope            // Invalid scope value or missing scope-specific parameter
+tools.ErrSlideNotFound           // Slide index out of range or ID not found
+tools.ErrObjectNotFound          // Object ID not found in presentation
+tools.ErrInvalidPresentationID   // Empty presentation ID
+tools.ErrPresentationNotFound    // Presentation not found
+tools.ErrAccessDenied            // No permission to modify
+tools.ErrSlidesAPIError          // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Translate entire presentation to French
+output, err := tools.TranslatePresentation(ctx, tokenSource, tools.TranslatePresentationInput{
+    PresentationID: "abc123",
+    TargetLanguage: "fr",
+})
+
+// Translate with source language specified
+output, err := tools.TranslatePresentation(ctx, tokenSource, tools.TranslatePresentationInput{
+    PresentationID: "abc123",
+    TargetLanguage: "es",
+    SourceLanguage: "en",
+})
+
+// Translate specific slide only
+output, err := tools.TranslatePresentation(ctx, tokenSource, tools.TranslatePresentationInput{
+    PresentationID: "abc123",
+    TargetLanguage: "de",
+    Scope:          "slide",
+    SlideIndex:     2,
+})
+
+// Translate specific object only
+output, err := tools.TranslatePresentation(ctx, tokenSource, tools.TranslatePresentationInput{
+    PresentationID: "abc123",
+    TargetLanguage: "ja",
+    Scope:          "object",
+    ObjectID:       "shape-xyz",
+})
+
+// Process results
+fmt.Printf("Translated %d elements across %d slides\n",
+    output.TranslatedCount, len(output.AffectedSlides))
+for _, elem := range output.TranslatedElements {
+    fmt.Printf("  %s: %q -> %q\n", elem.ObjectID, elem.OriginalText, elem.TranslatedText)
+}
+```
+
+### Translate Service Interface
+The tools package uses a `TranslateService` interface for Translation API operations:
+
+```go
+// Interface for mocking
+type TranslateService interface {
+    TranslateText(ctx context.Context, text, targetLanguage, sourceLanguage string) (string, error)
+    TranslateTexts(ctx context.Context, texts []string, targetLanguage, sourceLanguage string) ([]string, error)
+}
+
+// Factory pattern
+type TranslateServiceFactory func(ctx context.Context, tokenSource oauth2.TokenSource) (TranslateService, error)
+
+// Create tools with all services including Translate
+tools := tools.NewToolsWithAllServices(config, slidesFactory, driveFactory, translateFactory)
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
