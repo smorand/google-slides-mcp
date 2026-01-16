@@ -3086,6 +3086,115 @@ Create a transparent shape with border only:
 
 ---
 
+#### `create_table`
+
+Create a table on a slide with specified rows and columns.
+
+**Input:**
+```json
+{
+  "presentation_id": "abc123xyz",
+  "slide_index": 1,
+  "rows": 3,
+  "columns": 4,
+  "position": {"x": 100, "y": 50},
+  "size": {"width": 400, "height": 200}
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `presentation_id` | string | Yes | The Google Slides presentation ID |
+| `slide_index` | integer | No* | 1-based index of the target slide |
+| `slide_id` | string | No* | Object ID of the target slide |
+| `rows` | integer | Yes | Number of rows (minimum 1) |
+| `columns` | integer | Yes | Number of columns (minimum 1) |
+| `position` | object | No | Position in points (default: 0, 0) |
+| `position.x` | number | No | X coordinate in points from left edge |
+| `position.y` | number | No | Y coordinate in points from top edge |
+| `size` | object | No | Size in points (optional) |
+| `size.width` | number | No | Width in points (must be positive) |
+| `size.height` | number | No | Height in points (must be positive) |
+
+*Either `slide_index` or `slide_id` must be provided.
+
+**Output:**
+```json
+{
+  "object_id": "table_1234567890123456",
+  "rows": 3,
+  "columns": 4
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object_id` | string | Unique identifier of the created table |
+| `rows` | integer | Number of rows in the table |
+| `columns` | integer | Number of columns in the table |
+
+**Features:**
+- Creates an empty table with specified dimensions
+- Uses either 1-based slide index or slide ID for flexibility
+- Position defaults to (0, 0) if not specified
+- Size is optional - if not provided, table uses default sizing based on rows/columns
+- Standard slide dimensions: 720x405 points
+- 1 point = 12700 EMU (English Metric Units)
+
+**Use Cases:**
+- Creating data tables in presentations
+- Building comparison matrices
+- Adding structured content layouts
+- Creating schedules or timelines
+- Building organization charts
+
+**Examples:**
+
+Create a simple 3x4 table:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "rows": 3,
+  "columns": 4
+}
+```
+
+Create a table with position and size:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_id": "g123456",
+  "rows": 5,
+  "columns": 3,
+  "position": {"x": 50, "y": 100},
+  "size": {"width": 600, "height": 300}
+}
+```
+
+Create a single-cell table:
+```json
+{
+  "presentation_id": "abc123",
+  "slide_index": 1,
+  "rows": 1,
+  "columns": 1
+}
+```
+
+**Errors:**
+- `invalid presentation ID: presentation_id is required` - Empty presentation ID
+- `invalid slide reference: either slide_index or slide_id is required` - Neither slide reference provided
+- `rows must be at least 1` - Invalid row count
+- `columns must be at least 1` - Invalid column count
+- `invalid size: size is required with positive width and height` - Invalid size (if provided)
+- `slide not found` - Slide index out of range or slide ID not found
+- `presentation not found` - Presentation doesn't exist
+- `access denied to presentation` - No permission to modify
+- `failed to create table` - API error during table creation
+
+---
+
 #### `create_line`
 
 Create a line or arrow on a slide.

@@ -1037,7 +1037,7 @@
   - Initial data populates cells
   - Returns object_id and cell structure
   - 'Command: go test ./internal/tools/... -run TestCreateTable passes'
-  passes: false
+  passes: true
 - id: US-00043
   title: Implement tool to modify table structure
   priority: 11

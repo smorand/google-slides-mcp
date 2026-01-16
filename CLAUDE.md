@@ -2669,6 +2669,83 @@ output, err := tools.CreateShape(ctx, tokenSource, tools.CreateShapeInput{
 fmt.Printf("Created shape: %s\n", output.ObjectID)
 ```
 
+### create_table Tool (`create_table.go`)
+Creates a table on a slide with specified rows and columns.
+
+**Input:**
+```go
+tools.CreateTableInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    Rows:           3,                  // Required - number of rows (min 1)
+    Columns:        4,                  // Required - number of columns (min 1)
+    Position:       &PositionInput{X: 100, Y: 50},   // Position in points (default: 0, 0)
+    Size:           &SizeInput{Width: 400, Height: 200},  // Optional - size in points
+}
+```
+
+**Output:**
+```go
+tools.CreateTableOutput{
+    ObjectID: "table_1234567890",  // Unique ID of the created table
+    Rows:     3,                   // Number of rows
+    Columns:  4,                   // Number of columns
+}
+```
+
+**Features:**
+- Creates an empty table with specified dimensions
+- Position defaults to (0, 0) if not specified
+- Size is optional - if not provided, table uses default sizing based on rows/columns
+- Uses CreateTableRequest in Slides API BatchUpdate
+- 1 point = 12700 EMU (English Metric Units)
+
+**Sentinel Errors:**
+```go
+tools.ErrCreateTableFailed      // Generic table creation failure
+tools.ErrInvalidRowCount        // Rows must be at least 1
+tools.ErrInvalidColCount        // Columns must be at least 1
+tools.ErrInvalidSize            // Size must have positive width and height (if provided)
+tools.ErrInvalidSlideReference  // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound          // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID  // Empty presentation ID
+tools.ErrPresentationNotFound   // Presentation not found
+tools.ErrAccessDenied           // No permission to modify
+tools.ErrSlidesAPIError         // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Create basic 3x4 table
+output, err := tools.CreateTable(ctx, tokenSource, tools.CreateTableInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    Rows:           3,
+    Columns:        4,
+})
+
+// Create table with position and size
+output, err := tools.CreateTable(ctx, tokenSource, tools.CreateTableInput{
+    PresentationID: "abc123",
+    SlideID:        "g123456",
+    Rows:           5,
+    Columns:        3,
+    Position:       &tools.PositionInput{X: 50, Y: 100},
+    Size:           &tools.SizeInput{Width: 600, Height: 300},
+})
+
+// Create single-cell table
+output, err := tools.CreateTable(ctx, tokenSource, tools.CreateTableInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    Rows:           1,
+    Columns:        1,
+})
+
+fmt.Printf("Created table: %s (%dx%d)\n", output.ObjectID, output.Rows, output.Columns)
+```
+
 ### create_line Tool (`create_line.go`)
 Creates a line or arrow on a slide.
 
