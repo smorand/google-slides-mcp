@@ -1655,5 +1655,5 @@
   - Integration tests exist for main operations
   - Test cleanup removes test artifacts
   - 'Command: make test-integration succeeds (when creds available)'
-  passes: false
+  passes: true
 

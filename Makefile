@@ -1,4 +1,4 @@
-.PHONY: build build-all install install-launcher uninstall clean clean-all rebuild test fmt vet lint check run info help list-commands
+.PHONY: build build-all install install-launcher uninstall clean clean-all rebuild test test-integration fmt vet lint check run info help list-commands
 .PHONY: plan deploy undeploy init-plan init-deploy init-destroy update-backend
 
 # Detect current platform
@@ -367,6 +367,16 @@ else
 	@go test -v ./...
 endif
 
+# Run integration tests (requires credentials)
+test-integration:
+	@echo "Running integration tests..."
+	@echo "Note: Requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN"
+ifeq ($(HAS_SRC_DIR),yes)
+	@cd $(SRC_DIR) && INTEGRATION_TEST=1 go test -v -timeout 10m ./internal/integration/...
+else
+	@INTEGRATION_TEST=1 go test -v -timeout 10m ./internal/integration/...
+endif
+
 # Format code
 fmt:
 	@echo "Formatting code..."
@@ -455,6 +465,7 @@ help:
 	@echo "  clean            - Remove build artifacts"
 	@echo "  clean-all        - Remove build artifacts, go.mod, and go.sum"
 	@echo "  test             - Run tests"
+	@echo "  test-integration - Run integration tests (requires credentials)"
 	@echo "  fmt              - Format code"
 	@echo "  vet              - Run go vet"
 	@echo "  lint             - Run golangci-lint (or go vet if not installed)"

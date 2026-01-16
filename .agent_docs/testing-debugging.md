@@ -3,8 +3,11 @@
 ## Running Tests
 
 ```bash
-# Run all tests
+# Run all unit tests
 make test
+
+# Run integration tests (requires credentials)
+make test-integration
 
 # Run tests with verbose output
 go test -v ./...
@@ -24,6 +27,70 @@ go test -cover ./...
 # Generate coverage report
 go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out -o coverage.html
+```
+
+---
+
+## Integration Tests
+
+Integration tests verify end-to-end functionality with real Google APIs. They are located in `internal/integration/`.
+
+### Running Integration Tests
+
+```bash
+# Using Makefile target
+make test-integration
+
+# Or manually
+INTEGRATION_TEST=1 go test -v -timeout 10m ./internal/integration/...
+```
+
+### Required Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `INTEGRATION_TEST` | Set to "1" to enable integration tests |
+| `GOOGLE_CLIENT_ID` | OAuth2 client ID |
+| `GOOGLE_CLIENT_SECRET` | OAuth2 client secret |
+| `GOOGLE_REFRESH_TOKEN` | Valid refresh token for testing |
+| `TEST_PRESENTATION_ID` | (Optional) Existing presentation ID for read-only tests |
+| `GOOGLE_PROJECT_ID` | (Optional) GCP project ID for Firestore tests |
+
+### Test Categories
+
+| File | Tests |
+|------|-------|
+| `auth_test.go` | OAuth2 flow, token refresh |
+| `presentation_test.go` | Create, get, copy, search, export presentations |
+| `slide_test.go` | Add, delete, duplicate, reorder slides |
+| `object_test.go` | Text boxes, tables, transforms, styling |
+
+### Test Fixtures
+
+The `Fixtures` struct manages test resources:
+
+```go
+func TestSomething(t *testing.T) {
+    SkipIfNoIntegration(t)
+    config := LoadConfig(t)
+    fixtures := NewFixtures(t, config)
+
+    // Create test presentation (auto-cleaned up)
+    pres := fixtures.CreateTestPresentation("Test - My Feature")
+
+    // Use fixtures.TokenSource() for API calls
+    // Cleanup happens automatically via t.Cleanup()
+}
+```
+
+### Skipping Without Credentials
+
+Tests automatically skip when credentials are missing:
+
+```
+=== RUN   TestGetPresentation_LoadsExistingPresentation
+    presentation_test.go:14: Missing required environment variables
+--- SKIP: TestGetPresentation_LoadsExistingPresentation (0.00s)
 ```
 
 ---
