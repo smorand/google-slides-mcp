@@ -1365,7 +1365,7 @@
   - Append adds to existing notes
   - Clear removes all notes
   - 'Command: go test ./internal/tools/... -run TestManageSpeakerNotes passes'
-  passes: false
+  passes: true
 - id: US-00056
   title: Implement tool to list comments
   priority: 17

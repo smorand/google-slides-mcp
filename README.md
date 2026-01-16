@@ -4788,6 +4788,7 @@ There is no transition-related property available in the API.
 - `set_transition` - Add slide transitions
 - `add_animation` - Create object animations
 - `manage_animations` - Manage animation order (list, reorder, modify, delete)
+- `manage_speaker_notes` - Get, set, append, or clear speaker notes
 
 ## Configuration
 

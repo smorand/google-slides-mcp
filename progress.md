@@ -1924,3 +1924,48 @@ Animations can only be managed through the Google Slides UI (View > Motion or In
 - Tool follows same structure as add_animation for maintainability
 
 **Remaining issues:** None - this is an API limitation, not a bug
+
+---
+
+## US-00055: Implement tool to manage speaker notes
+
+**Status:** ✅ Completed
+
+**Implementation Date:** 2026-01-16
+
+**Files Created:**
+- `internal/tools/manage_speaker_notes.go` - Main implementation with:
+  - `ManageSpeakerNotesInput` struct with presentation_id, slide_index/slide_id, action, notes_text
+  - `ManageSpeakerNotesOutput` struct with slide_id, slide_index, action, notes_content
+  - `ManageSpeakerNotes` method supporting get/set/append/clear actions
+  - `findSpeakerNotesShape` helper to locate BODY placeholder in notes page
+  - `buildSpeakerNotesRequests` helper to generate BatchUpdate requests
+  - 4 sentinel errors: ErrManageSpeakerNotesFailed, ErrInvalidSpeakerNotesAction, ErrNotesTextRequired, ErrNotesShapeNotFound
+
+- `internal/tools/manage_speaker_notes_test.go` - Comprehensive test suite with:
+  - TestManageSpeakerNotes_Get: 5 subtests (by index, by ID, empty notes, no notes page, case insensitive)
+  - TestManageSpeakerNotes_Set: 4 subtests (replace existing, empty to new, no placeholder, batch error)
+  - TestManageSpeakerNotes_Append: 2 subtests (to existing, to empty)
+  - TestManageSpeakerNotes_Clear: 2 subtests (existing, already empty)
+  - TestManageSpeakerNotes_ValidationErrors: 5 subtests (missing fields, invalid action)
+  - TestManageSpeakerNotes_PresentationErrors: 3 subtests (not found, access denied, API error)
+  - TestManageSpeakerNotes_SlideNotFound: 2 subtests (out of range, nonexistent ID)
+  - TestManageSpeakerNotes_MultipleSlides: 4 subtests (various slides by index and ID)
+  - TestManageSpeakerNotes_BatchUpdateForbidden: 1 test for 403 on modification
+  - TestBuildSpeakerNotesRequests: 6 subtests for request generation
+  - TestFindSpeakerNotesShape: 6 subtests for notes shape location
+
+- `CLAUDE.md` - Added manage_speaker_notes documentation with input/output examples, actions table, sentinel errors, usage pattern
+
+- `README.md` - Added manage_speaker_notes to tool listing
+
+- `stories.yaml` - Marked US-00055 as passes: true
+
+**Learnings:**
+- Speaker notes are stored in SlideProperties.NotesPage.PageElements with BODY placeholder type
+- Reused extractTextFromTextContent helper from get_presentation.go for text extraction
+- Used same pattern as modify_text.go for DeleteText/InsertText BatchUpdate requests
+- Append action uses InsertText at position equal to current text length
+- 1-based slide indexing kept consistent with other tools for human-friendly API
+
+**Remaining issues:** None

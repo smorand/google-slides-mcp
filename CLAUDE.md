@@ -4466,6 +4466,94 @@ if errors.Is(err, tools.ErrManageAnimationsNotSupported) {
 }
 ```
 
+### manage_speaker_notes Tool (`manage_speaker_notes.go`)
+Gets, sets, appends, or clears speaker notes on a slide.
+
+**Input:**
+```go
+tools.ManageSpeakerNotesInput{
+    PresentationID: "presentation-id",  // Required
+    SlideIndex:     1,                  // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",  // Alternative to SlideIndex
+    Action:         "get",              // Required: "get", "set", "append", "clear"
+    NotesText:      "Speaker notes",    // Required for "set" and "append" actions
+}
+```
+
+**Output:**
+```go
+tools.ManageSpeakerNotesOutput{
+    SlideID:      "slide-object-id",    // The slide's object ID
+    SlideIndex:   1,                    // 1-based slide index
+    Action:       "get",                // The action performed (lowercase)
+    NotesContent: "Current notes text", // The notes content after the action
+}
+```
+
+**Actions:**
+| Action | Description |
+|--------|-------------|
+| `get` | Retrieves current speaker notes content |
+| `set` | Replaces speaker notes with new text |
+| `append` | Adds text to end of existing notes |
+| `clear` | Removes all speaker notes text |
+
+**Features:**
+- Accepts either 1-based slide index OR slide ID for identification
+- Action names are case-insensitive (get, GET, Get all work)
+- Returns current notes content for all actions
+- Finds notes in BODY placeholder of slide's notes page
+- Falls back to any shape with text if no BODY placeholder exists
+- Uses DeleteText followed by InsertText for modifications
+
+**Sentinel Errors:**
+```go
+tools.ErrManageSpeakerNotesFailed  // Generic speaker notes failure
+tools.ErrInvalidSpeakerNotesAction // Invalid action (not get, set, append, or clear)
+tools.ErrNotesTextRequired         // notes_text required for set/append actions
+tools.ErrNotesShapeNotFound        // No speaker notes placeholder found on slide
+tools.ErrInvalidSlideReference     // Neither slide_index nor slide_id provided
+tools.ErrSlideNotFound             // Slide index out of range or ID not found
+tools.ErrInvalidPresentationID     // Empty presentation ID
+tools.ErrPresentationNotFound      // Presentation not found
+tools.ErrAccessDenied              // No permission to access/modify
+tools.ErrSlidesAPIError            // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// Get current speaker notes
+output, err := tools.ManageSpeakerNotes(ctx, tokenSource, tools.ManageSpeakerNotesInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    Action:         "get",
+})
+fmt.Printf("Notes: %s\n", output.NotesContent)
+
+// Set speaker notes (replace existing)
+output, err := tools.ManageSpeakerNotes(ctx, tokenSource, tools.ManageSpeakerNotesInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    Action:         "set",
+    NotesText:      "These are the new speaker notes.",
+})
+
+// Append to speaker notes
+output, err := tools.ManageSpeakerNotes(ctx, tokenSource, tools.ManageSpeakerNotesInput{
+    PresentationID: "abc123",
+    SlideID:        "slide-xyz",
+    Action:         "append",
+    NotesText:      "\n\nAdditional notes.",
+})
+
+// Clear speaker notes
+output, err := tools.ManageSpeakerNotes(ctx, tokenSource, tools.ManageSpeakerNotesInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    Action:         "clear",
+})
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
