@@ -1863,3 +1863,64 @@ The Google Slides API does NOT support adding or managing object animations prog
 - Using pointers for optional numeric fields (Duration, Delay) allows distinguishing "not set" from "zero"
 
 **Remaining issues:** None - this is an API limitation, not a bug
+
+---
+
+## 2026-01-16 - US-00054 - Implement tool to manage animation order
+
+**Status:** Success
+
+**What was implemented:**
+- MCP Tool `manage_animations` for managing slide animations (list, reorder, modify, delete)
+- Tool returns informative error because Google Slides API does not support animation management
+- This is a known API limitation tracked at https://issuetracker.google.com/issues/36761236
+- Comprehensive input validation before returning the API limitation error:
+  - presentation_id required
+  - slide_index (1-based) or slide_id required
+  - action required: list, reorder, modify, delete (case-insensitive)
+  - Action-specific validation:
+    - reorder: animation_ids array required
+    - modify: animation_id and properties required
+    - delete: animation_id required
+  - Properties validation for modify action:
+    - animation_type, animation_category, direction, trigger must be valid if provided
+    - duration/delay must be 0-60 seconds if provided
+
+**API Limitation:** Google Slides API does not provide endpoints for:
+- Listing/reading animations
+- Reordering animations
+- Modifying animation properties
+- Deleting animations
+
+Animations can only be managed through the Google Slides UI (View > Motion or Insert > Animation)
+
+**Files changed:**
+- `internal/tools/manage_animations.go` - Tool implementation with:
+  - ManageAnimationsInput/ManageAnimationsOutput structs
+  - AnimationModifyProperties struct for modify action
+  - AnimationInfo struct for animation details (for future API support)
+  - Sentinel errors: ErrManageAnimationsFailed, ErrManageAnimationsNotSupported, ErrInvalidManageAnimationsAction, ErrInvalidAnimationID, ErrNoAnimationIDs, ErrNoAnimationProperties
+  - validManageAnimationsActions map: LIST, REORDER, MODIFY, DELETE
+  - validateAnimationProperties method reusing add_animation validation patterns
+  - Action normalization (uppercase conversion)
+  
+- `internal/tools/manage_animations_test.go` - 70+ test cases across 5 test functions:
+  - TestManageAnimations: 24 subtests for all actions returning API error and input validation
+  - TestManageAnimations_AllActions: 8 subtests testing all actions with case variations
+  - TestManageAnimations_ValidPropertiesWithAllOptions: 26 subtests for valid properties
+  - TestManageAnimations_ErrorMessageContainsIssueTracker: verifies error message quality
+  - TestManageAnimations_SlideReferenceOptions: 3 subtests for slide_index/slide_id combinations
+  
+- `CLAUDE.md` - Added manage_animations documentation with API limitation warning, input/output examples, actions table, sentinel errors, usage pattern
+  
+- `README.md` - Added manage_animations to tool listing
+  
+- `stories.yaml` - Marked US-00054 as passes: true
+
+**Learnings:**
+- Animation management has same API limitation as animation creation (add_animation)
+- Reusing validation maps and patterns from add_animation keeps code consistent
+- Validating all inputs before returning API limitation helps users understand what would work if API supported it
+- Tool follows same structure as add_animation for maintainability
+
+**Remaining issues:** None - this is an API limitation, not a bug

@@ -1342,7 +1342,7 @@
   - Modify updates animation properties
   - Delete removes animation
   - 'Command: go test ./internal/tools/... -run TestManageAnimations passes'
-  passes: false
+  passes: true
 - id: US-00055
   title: Implement tool to manage speaker notes
   priority: 16

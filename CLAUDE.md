@@ -4390,6 +4390,82 @@ if errors.Is(err, tools.ErrAnimationNotSupported) {
 }
 ```
 
+### manage_animations Tool (`manage_animations.go`)
+**API LIMITATION:** This tool returns an error because the Google Slides API does not support managing object animations programmatically.
+
+**Input:**
+```go
+tools.ManageAnimationsInput{
+    PresentationID: "presentation-id",     // Required
+    SlideIndex:     1,                     // 1-based index (use this OR SlideID)
+    SlideID:        "slide-object-id",     // Alternative to SlideIndex
+    Action:         "list",                // Required: list, reorder, modify, delete
+    AnimationIDs:   []string{"id1", "id2"},// For reorder: array in new order
+    AnimationID:    "anim-1",              // For modify/delete: specific animation ID
+    Properties:     &AnimationModifyProperties{...}, // For modify action
+}
+
+// Properties for modify action:
+tools.AnimationModifyProperties{
+    AnimationType:     "FADE_IN",        // Optional: APPEAR, FADE_IN, FLY_IN, etc.
+    AnimationCategory: "entrance",       // Optional: entrance, exit, emphasis
+    Direction:         "FROM_LEFT",      // Optional: FROM_LEFT, FROM_RIGHT, etc.
+    Duration:          &0.5,             // Optional: seconds (0-60)
+    Delay:             &0.2,             // Optional: seconds (0-60)
+    Trigger:           "ON_CLICK",       // Optional: ON_CLICK, AFTER_PREVIOUS, WITH_PREVIOUS
+}
+```
+
+**Output:**
+```go
+tools.ManageAnimationsOutput{
+    Success:    bool,              // Always false (API limitation)
+    Message:    string,            // Error explanation
+    Action:     string,            // The action attempted
+    Animations: []AnimationInfo{}, // Empty (API limitation)
+}
+```
+
+**Actions:**
+| Action | Description | Required Parameters |
+|--------|-------------|---------------------|
+| `list` | List all animations on a slide in order | slide reference only |
+| `reorder` | Change animation sequence | `animation_ids` array in new order |
+| `modify` | Update animation properties | `animation_id` and `properties` |
+| `delete` | Remove an animation | `animation_id` |
+
+**Important API Limitation:**
+The Google Slides API does NOT support listing, reordering, modifying, or deleting object animations. This is a known limitation tracked at https://issuetracker.google.com/issues/36761236.
+
+Animations can only be managed through:
+1. Google Slides UI (View > Motion or Insert > Animation)
+2. Google Apps Script (with limitations)
+
+**Sentinel Errors:**
+```go
+tools.ErrManageAnimationsNotSupported    // API does not support animations (always returned for valid input)
+tools.ErrInvalidManageAnimationsAction   // Invalid action value
+tools.ErrInvalidAnimationID              // Animation ID required but not provided
+tools.ErrNoAnimationIDs                  // Animation IDs array required for reorder
+tools.ErrNoAnimationProperties           // Properties required for modify action
+tools.ErrInvalidSlideReference           // Neither slide_index nor slide_id provided
+tools.ErrInvalidPresentationID           // Empty presentation ID
+```
+
+**Usage Pattern:**
+```go
+// Attempting to list animations will return informative error
+output, err := tools.ManageAnimations(ctx, tokenSource, tools.ManageAnimationsInput{
+    PresentationID: "abc123",
+    SlideIndex:     1,
+    Action:         "list",
+})
+if errors.Is(err, tools.ErrManageAnimationsNotSupported) {
+    // Expected error - inform user to use Slides UI instead
+    fmt.Println("Animation management must be done via Google Slides UI (View > Motion)")
+}
+```
+
 ### Drive Service Interface
 The tools package uses a `DriveService` interface for Drive API operations:
 
