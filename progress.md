@@ -2266,3 +2266,59 @@ Implemented the `translate_presentation` MCP tool that translates text in a Goog
 **Test Results:** All 24 tests pass
 
 **Remaining issues:** None
+
+---
+
+## 2026-01-16 - US-00060 - Implement tool to manage hyperlinks
+
+**Status:** Success
+
+**What was implemented:**
+- MCP Tool: `manage_hyperlinks` with three actions: list, add, remove
+- List action scans all slides for hyperlinks (text links, shape links, image links)
+- Add action creates hyperlinks on text ranges or entire shapes/images
+- Remove action clears hyperlinks from text ranges
+- Support for external URLs and internal slide links (#slide=N, #slideId=ID, #next, #previous, #first, #last)
+- Link type detection (external, internal_slide, internal_position)
+- Scope filtering for list action (all, slide, object)
+- Comprehensive test suite with 27 test cases
+
+**Files changed:**
+- `internal/tools/manage_hyperlinks.go` - Main implementation:
+  - ManageHyperlinksInput/ManageHyperlinksOutput structs
+  - HyperlinkInfo struct for hyperlink details
+  - listHyperlinks - scans presentation for all hyperlinks
+  - addHyperlink - creates hyperlinks on text or shapes/images
+  - removeHyperlink - clears hyperlinks from text ranges
+  - Helper functions for link type detection and URL parsing
+
+- `internal/tools/manage_hyperlinks_test.go` - Test suite:
+  - Tests for all story requirements
+  - Mock-based testing with mockSlidesService
+  - Edge cases: empty presentation, invalid actions, missing URLs
+
+- `CLAUDE.md` - Added manage_hyperlinks tool documentation:
+  - Input/Output struct definitions with examples
+  - Link types table and URL formats for internal links
+  - Features list and sentinel errors
+  - Usage patterns with code examples
+
+- `stories.yaml` - Marked US-00060 as passes: true
+
+**Learnings:**
+- Google Slides API Shape type has Link inside ShapeProperties, not directly on Shape
+  - Wrong: `element.Shape.Link`
+  - Correct: `element.Shape.ShapeProperties.Link`
+- Image hyperlinks use ImageProperties.Link, shape hyperlinks use ShapeProperties.Link
+- Text hyperlinks are in TextRun.Style.Link within shape text elements
+- Internal slide links use different formats:
+  - `#slide=N` for 1-based slide index
+  - `#slideId=ID` for slide object ID
+  - `#next`, `#previous`, `#first`, `#last` for relative navigation
+- Link.RelativeLink field indicates internal position links (NEXT_SLIDE, PREVIOUS_SLIDE, etc.)
+- Use strings.CutPrefix instead of HasPrefix+TrimPrefix for cleaner code
+- For unused context parameters in functions, use `_` to satisfy linter
+
+**Test Results:** All 27 tests pass
+
+**Remaining issues:** None

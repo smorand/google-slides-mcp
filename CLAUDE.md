@@ -4932,6 +4932,148 @@ for _, elem := range output.TranslatedElements {
 }
 ```
 
+### manage_hyperlinks Tool (`manage_hyperlinks.go`)
+Creates, lists, or removes hyperlinks in a presentation.
+
+**Input:**
+```go
+tools.ManageHyperlinksInput{
+    PresentationID: "presentation-id",  // Required
+    Action:         "list",             // Required: "list", "add", "remove"
+    Scope:          "all",              // For "list": "all", "slide", "object" - default "all"
+    SlideID:        "slide-id",         // For "list" with scope="slide"
+    ObjectID:       "shape-id",         // For "list" with scope="object", or target for add/remove
+    StartIndex:     &startIdx,          // For text hyperlinks: start index (optional)
+    EndIndex:       &endIdx,            // For text hyperlinks: end index (optional)
+    URL:            "https://...",      // For "add": the hyperlink URL (required)
+}
+```
+
+**Output:**
+```go
+tools.ManageHyperlinksOutput{
+    PresentationID: "presentation-id",
+    Action:         "list",                 // The action performed
+    Hyperlinks:     []HyperlinkInfo{...},   // For "list": array of found hyperlinks
+    HyperlinkAdded: &HyperlinkInfo{...},    // For "add": the created hyperlink
+    HyperlinkRemoved: &HyperlinkInfo{...},  // For "remove": the removed hyperlink info
+}
+
+// Each hyperlink contains:
+tools.HyperlinkInfo{
+    SlideIndex: 1,                  // 1-based slide index
+    SlideID:    "slide-id",
+    ObjectID:   "shape-id",
+    ObjectType: "TEXT_BOX",         // Shape type
+    StartIndex: 0,                  // Character index for text links
+    EndIndex:   10,                 // End character index
+    URL:        "https://...",      // External URL (if external link)
+    SlideLink:  "#slide=2",         // Internal slide link format
+    LinkType:   "external",         // "external", "internal_slide", or "internal_position"
+    Text:       "Click here",       // The linked text
+}
+```
+
+**Link Types:**
+| Type | Description |
+|------|-------------|
+| `external` | Links to external URLs (https://...) |
+| `internal_slide` | Links to specific slides (#slide=N, #slideId=ID) |
+| `internal_position` | Relative slide links (#next, #previous, #first, #last) |
+
+**URL Formats for Internal Links:**
+- `#slide=N` - Link to slide by 1-based index
+- `#slideId=<id>` - Link to slide by object ID
+- `#next` - Link to next slide (relative)
+- `#previous` - Link to previous slide (relative)
+- `#first` - Link to first slide
+- `#last` - Link to last slide
+
+**Features:**
+- List action scans all slides for hyperlinks (text links, shape links, image links)
+- Scope filtering: all slides, specific slide, or specific object
+- Add action creates hyperlinks on text ranges (with start_index/end_index) or entire shapes/images
+- Remove action clears hyperlinks from text ranges
+- Supports both external URLs and internal slide navigation
+- Action names are case-insensitive (list, LIST, List all work)
+- For shape/image links (no text range), uses UpdateShapePropertiesRequest or UpdateImagePropertiesRequest
+- For text links, uses UpdateTextStyleRequest with Link field
+
+**Sentinel Errors:**
+```go
+tools.ErrManageHyperlinksFailed  // Generic hyperlink management failure
+tools.ErrInvalidHyperlinkAction  // Invalid action (must be 'list', 'add', or 'remove')
+tools.ErrInvalidHyperlinkURL     // URL is required for add action
+tools.ErrNoHyperlinkToRemove     // No hyperlink found at specified range
+tools.ErrObjectNotFound          // Object ID not found in presentation
+tools.ErrSlideNotFound           // Slide ID not found in presentation
+tools.ErrInvalidPresentationID   // Empty presentation ID
+tools.ErrPresentationNotFound    // Presentation not found
+tools.ErrAccessDenied            // No permission to access/modify
+tools.ErrSlidesAPIError          // Other Slides API errors
+```
+
+**Usage Pattern:**
+```go
+// List all hyperlinks in presentation
+output, err := tools.ManageHyperlinks(ctx, tokenSource, tools.ManageHyperlinksInput{
+    PresentationID: "abc123",
+    Action:         "list",
+})
+
+// List hyperlinks on specific slide
+output, err := tools.ManageHyperlinks(ctx, tokenSource, tools.ManageHyperlinksInput{
+    PresentationID: "abc123",
+    Action:         "list",
+    Scope:          "slide",
+    SlideID:        "slide-xyz",
+})
+
+// Add external hyperlink to text range
+startIdx := 0
+endIdx := 10
+output, err := tools.ManageHyperlinks(ctx, tokenSource, tools.ManageHyperlinksInput{
+    PresentationID: "abc123",
+    Action:         "add",
+    ObjectID:       "shape-xyz",
+    StartIndex:     &startIdx,
+    EndIndex:       &endIdx,
+    URL:            "https://example.com",
+})
+
+// Add hyperlink to entire shape (no text range)
+output, err := tools.ManageHyperlinks(ctx, tokenSource, tools.ManageHyperlinksInput{
+    PresentationID: "abc123",
+    Action:         "add",
+    ObjectID:       "shape-xyz",
+    URL:            "https://example.com",
+})
+
+// Add internal slide link
+output, err := tools.ManageHyperlinks(ctx, tokenSource, tools.ManageHyperlinksInput{
+    PresentationID: "abc123",
+    Action:         "add",
+    ObjectID:       "shape-xyz",
+    URL:            "#slide=3",  // Link to slide 3
+})
+
+// Remove hyperlink from text range
+output, err := tools.ManageHyperlinks(ctx, tokenSource, tools.ManageHyperlinksInput{
+    PresentationID: "abc123",
+    Action:         "remove",
+    ObjectID:       "shape-xyz",
+    StartIndex:     &startIdx,
+    EndIndex:       &endIdx,
+})
+
+// Process list results
+fmt.Printf("Found %d hyperlinks\n", len(output.Hyperlinks))
+for _, link := range output.Hyperlinks {
+    fmt.Printf("  Slide %d, %s: %q -> %s\n",
+        link.SlideIndex, link.ObjectID, link.Text, link.URL)
+}
+```
+
 ### Translate Service Interface
 The tools package uses a `TranslateService` interface for Translation API operations:
 

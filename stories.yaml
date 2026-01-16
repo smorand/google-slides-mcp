@@ -1497,7 +1497,7 @@
   - Remove clears link from text
   - Internal slide links work
   - 'Command: go test ./internal/tools/... -run TestManageHyperlinks passes'
-  passes: false
+  passes: true
 - id: US-00061
   title: Implement batch operations support
   priority: 20
