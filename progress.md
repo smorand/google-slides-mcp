@@ -1249,3 +1249,37 @@
 **Remaining issues:** None
 
 ---
+
+## 2026-01-16 - US-00038 - Implement tool to move/resize object
+
+**Status:** Success
+
+**What was implemented:**
+- New `transform_object` MCP tool to move, resize, or rotate any object
+- Input accepts presentation_id, object_id, optional position, size, rotation, and scale_proportionally flag
+- Affine transform decomposition and recomposition for complex transformations
+- Position: moves object to absolute coordinates (in points, converted to EMU)
+- Size: resizes object with optional proportional scaling when only width or height specified
+- Rotation: rotates object to specific angle (in degrees, 0-360)
+- Preserves existing transform properties when only some are updated
+- Uses `UpdatePageElementTransformRequest` with ABSOLUTE mode for precise control
+- Returns final position, size, and rotation in output
+- Comprehensive test suite with 5 test cases covering all transformations
+
+**Files changed:**
+- `internal/tools/transform_object.go` - Tool implementation with TransformObjectInput, TransformObjectOutput types, calculateNewTransform, findElementByIDRecursively helpers
+- `internal/tools/transform_object_test.go` - Comprehensive tests (5 test cases: move only, resize proportional, resize non-proportional, rotate, rotate and move)
+- `CLAUDE.md` - Added transform_object documentation with input/output examples and usage patterns
+- `README.md` - Added transform_object tool documentation with parameters, examples, and errors
+
+**Learnings:**
+- Google Slides uses AffineTransform matrix: [ScaleX ShearX TranslateX; ShearY ScaleY TranslateY; 0 0 1]
+- Decomposing transform: Sx = sqrt(ScaleX² + ShearY²), Sy = sqrt(ScaleY² + ShearX²), rotation = atan2(ShearY, ScaleX)
+- Recomposing transform: ScaleX = Sx*cos(θ), ShearY = Sx*sin(θ), ShearX = -Sy*sin(θ), ScaleY = Sy*cos(θ)
+- `Size` property in PageElement is read-only; resizing must be done via Transform scale factors
+- Visual size = Base size × Scale factor; to resize, calculate new scale as targetSize/baseSize
+- UpdatePageElementTransformRequest with ABSOLUTE mode sets exact transform values
+
+**Remaining issues:** None
+
+---
