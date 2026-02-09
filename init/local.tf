@@ -29,9 +29,6 @@ locals {
   # Resource naming pattern: {prefix}-{resource}-{location_id}-{env}
   state_bucket_name = "smo-tfstate-${local.location_id}-${local.env}"
 
-  # Service account naming pattern: {prefix}-{service}-{env} (max 30 chars)
-  service_accounts = {
-    cloudrun   = "${local.prefix}-cloudrun-${local.env}"
-    cloudbuild = "${local.prefix}-cloudbuild-${local.env}"
-  }
+  # DevOps service account (for Cloud Build/Terraform deployments)
+  devops_sa_name = "${local.prefix}-devops-${local.env}"
 }

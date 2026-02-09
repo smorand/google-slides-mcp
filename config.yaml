@@ -1,20 +1,17 @@
 # Google Slides MCP Server Configuration
 # Single source of truth for all terraform and application config
-
 # ============================================
 # GLOBAL CONFIGURATION
 # ============================================
-prefix: smogslides              # Consistent prefix: smo{project}
-project_name: gslides-mcp       # Short project identifier
-env: prd                        # Environment: dev, stg, prd
+prefix: smogslides1 # Consistent prefix: smo{project}
+project_name: gslides-mcp # Short project identifier
+env: prd # Environment: dev, stg, prd
 description: Google Slides MCP Server - HTTP streamable MCP for Google Slides API
-
 # ============================================
 # GCP CONFIGURATION
 # ============================================
-project_id: project-3335b451-2ffb-4ece-8cd  # GCP project ID
-location: europe-west1                       # Primary region
-
+project_id: project-fb127223-bfef-43d1-94e # GCP project ID
+location: europe-west1 # Primary region
 # APIs/Services to enable
 services:
   - run.googleapis.com
@@ -30,7 +27,6 @@ services:
   - drive.googleapis.com
   - translate.googleapis.com
   - artifactregistry.googleapis.com
-
 # ============================================
 # RESOURCE CONFIGURATION
 # ============================================
@@ -41,7 +37,6 @@ resources:
   max_instances: 5
   timeout_seconds: 300
   concurrency: 80
-
 # ============================================
 # APPLICATION PARAMETERS
 # ============================================
@@ -51,7 +46,6 @@ parameters:
   max_retries: "5"
   log_level: info
   rate_limit_rps: "100"
-
 # ============================================
 # LABELS
 # ============================================

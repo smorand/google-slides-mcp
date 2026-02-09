@@ -51,7 +51,7 @@ resource "google_cloud_run_v2_service" "mcp" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account = local.cloudrun_sa_email
+    service_account = google_service_account.cloudrun.email
 
     scaling {
       min_instance_count = local.mcp_min_instances
@@ -152,6 +152,7 @@ resource "google_cloud_run_v2_service" "mcp" {
     google_artifact_registry_repository.docker,
     google_secret_manager_secret.oauth_credentials,
     docker_registry_image.mcp,
+    google_service_account.cloudrun,
   ]
 }
 
@@ -180,9 +181,4 @@ output "cloud_run_url" {
 output "oauth_secret_name" {
   value       = google_secret_manager_secret.oauth_credentials.secret_id
   description = "Name of the Secret Manager secret for OAuth credentials"
-}
-
-output "service_account_email" {
-  value       = local.cloudrun_sa_email
-  description = "Email of the Cloud Run service account"
 }

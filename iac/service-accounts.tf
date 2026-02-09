@@ -1,12 +1,12 @@
-# Service Accounts and IAM Roles
-# Creates dedicated service accounts for Cloud Run and Cloud Build
+# Service Accounts for Application Workloads
+# Creates dedicated service accounts for Cloud Run
 
 # ============================================
 # CLOUD RUN SERVICE ACCOUNT
 # ============================================
 
 resource "google_service_account" "cloudrun" {
-  account_id   = local.service_accounts.cloudrun
+  account_id   = "${local.prefix}-cloudrun-${local.env}"
   display_name = "Google Slides MCP - Cloud Run Service Account"
   description  = "Custom service account for Cloud Run services"
   project      = local.project_id
@@ -48,54 +48,10 @@ resource "google_project_iam_member" "cloudrun_firestore" {
 }
 
 # ============================================
-# CLOUD BUILD SERVICE ACCOUNT
-# ============================================
-
-resource "google_service_account" "cloudbuild" {
-  account_id   = local.service_accounts.cloudbuild
-  display_name = "Google Slides MCP - Cloud Build Service Account"
-  description  = "Custom service account for Cloud Build"
-  project      = local.project_id
-}
-
-# Grant Artifact Registry writer (for pushing images)
-resource "google_project_iam_member" "cloudbuild_artifactregistry" {
-  project = local.project_id
-  role    = "roles/artifactregistry.writer"
-  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
-}
-
-# Grant Cloud Run developer (for deploying services)
-resource "google_project_iam_member" "cloudbuild_run" {
-  project = local.project_id
-  role    = "roles/run.developer"
-  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
-}
-
-# Grant Service Account user (for deploying with custom SA)
-resource "google_project_iam_member" "cloudbuild_sa_user" {
-  project = local.project_id
-  role    = "roles/iam.serviceAccountUser"
-  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
-}
-
-# Grant Cloud Build builder
-resource "google_project_iam_member" "cloudbuild_builder" {
-  project = local.project_id
-  role    = "roles/cloudbuild.builds.builder"
-  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
-}
-
-# ============================================
 # OUTPUTS
 # ============================================
 
 output "cloudrun_service_account_email" {
   value       = google_service_account.cloudrun.email
   description = "Email of the Cloud Run service account"
-}
-
-output "cloudbuild_service_account_email" {
-  value       = google_service_account.cloudbuild.email
-  description = "Email of the Cloud Build service account"
 }

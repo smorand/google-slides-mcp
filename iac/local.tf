@@ -37,8 +37,7 @@ locals {
   mcp_timeout        = lookup(local.resources, "timeout_seconds", 300)
   mcp_concurrency    = lookup(local.resources, "concurrency", 80)
 
-  # Service account (created by init/)
-  cloudrun_sa_email = "${local.prefix}-cloudrun-${local.env}@${local.project_id}.iam.gserviceaccount.com"
+  # Note: Cloud Run service account is created in service-accounts.tf
 
   # Secret name for OAuth credentials
   oauth_secret_name = lookup(local.parameters, "oauth_secret_name", "smo-gslides-oauth-creds")
